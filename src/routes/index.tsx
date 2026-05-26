@@ -482,11 +482,18 @@ function FinalClose() {
             </div>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-lg text-white/70">
-            <Reveal><p>This Academy was built for that future.</p></Reveal>
-            <Reveal delay={0.1}><p>And if you are reading this right now…</p></Reveal>
-            <Reveal delay={0.2}><p className="text-white text-xl font-display">You already know you belong in rooms like this.</p></Reveal>
-          </div>
+          <Reveal delay={0.1}>
+            <div className="mt-12">
+              <StackedCards
+                eyebrow="A note to you — swipe"
+                items={[
+                  { kicker: "/ 01", text: "This Academy was built for that future." },
+                  { kicker: "/ 02", text: "And if you are reading this right now…" },
+                  { kicker: "/ 03", text: "You already know you belong in rooms like this." },
+                ]}
+              />
+            </div>
+          </Reveal>
 
           <Reveal delay={0.1}>
             <div className="my-14 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
