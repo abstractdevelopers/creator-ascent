@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Reveal } from "@/components/uca/Reveal";
+import { StackedCards } from "@/components/uca/StackedCards";
 import section1 from "@/assets/section1.jpg";
 import section2 from "@/assets/section2.jpg";
 import section3 from "@/assets/section3.jpg";
@@ -79,11 +80,12 @@ function Hero() {
     <section className="relative">
       <KeyArt src={section1} alt="UCA — Unify Creator Academy" bg="#4B0E83" priority />
 
-      {/* Cinematic headline section below image — mirrors the reference */}
-      <div className="relative bg-[#0D0707] px-6 pb-20 pt-10 sm:pt-16">
+      {/* Headline pulled up into the bottom black shade of the key art so the
+          hero fits in a single mobile viewport, matching the reference. */}
+      <div className="relative -mt-[22vh] bg-gradient-to-b from-transparent via-[#0D0707] to-[#0D0707] px-6 pb-16 pt-0 sm:-mt-32 sm:pt-4">
         <div className="mx-auto max-w-[750px]">
           <Reveal>
-            <h1 className="font-display text-[44px] leading-[0.95] tracking-tight sm:text-6xl md:text-7xl">
+            <h1 className="font-display text-[38px] leading-[0.95] tracking-tight sm:text-6xl md:text-7xl">
               AI IS GOING
               <br />
               TO REPLACE
@@ -102,20 +104,11 @@ function Hero() {
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
-            <div className="mt-6 h-px w-40 bg-gradient-to-r from-[#E6A9FF] to-transparent" />
+            <div className="mt-5 h-px w-40 bg-gradient-to-r from-[#E6A9FF] to-transparent" />
           </Reveal>
 
-          <div className="mt-14 space-y-6 text-lg text-white/70">
-            <Reveal delay={0.1}>
-              <p>The next generation of creators, voices, founders and personal brands is being built right now.</p>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <p className="text-white">This is your opportunity to become one of them.</p>
-            </Reveal>
-          </div>
-
-          <Reveal delay={0.35}>
-            <div className="mt-12 flex flex-col gap-3 sm:flex-row">
+          <Reveal delay={0.25}>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <a href="#apply" className="btn-primary rounded-full px-7 py-4 text-center text-sm font-semibold tracking-wide">
                 BECOME THE NEXT PUBLIC FIGURE
               </a>
@@ -124,6 +117,15 @@ function Hero() {
               </a>
             </div>
           </Reveal>
+
+          <div className="mt-14 space-y-5 text-base text-white/65 sm:text-lg">
+            <Reveal delay={0.1}>
+              <p>The next generation of creators, voices, founders and personal brands is being built right now.</p>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <p className="text-white">This is your opportunity to become one of them.</p>
+            </Reveal>
+          </div>
         </div>
       </div>
     </section>
@@ -159,14 +161,20 @@ function UCAIntro() {
             </h2>
           </Reveal>
 
-          {/* Staggered cinematic lines */}
-          <div className="mt-14 space-y-7 text-lg text-white/70">
-            <Reveal delay={0.05}><p className="text-white/50 text-base uppercase tracking-[0.3em]">Listen,</p></Reveal>
-            <Reveal delay={0.1}><p className="text-white text-2xl font-display leading-snug">You were not meant to disappear into the crowd.</p></Reveal>
-            <Reveal delay={0.18}><p>Not when you have ideas.</p></Reveal>
-            <Reveal delay={0.24}><p>Not when you have vision.</p></Reveal>
-            <Reveal delay={0.3}><p>Not when you know you are capable of more.</p></Reveal>
-          </div>
+          {/* Stacked swipeable cards — long copy becomes cinematic beats */}
+          <Reveal delay={0.1}>
+            <div className="mt-14">
+              <StackedCards
+                eyebrow="Listen — swipe through"
+                items={[
+                  { kicker: "/ 01", text: "You were not meant to disappear into the crowd." },
+                  { kicker: "/ 02", text: "Not when you have ideas." },
+                  { kicker: "/ 03", text: "Not when you have vision." },
+                  { kicker: "/ 04", text: "Not when you know you are capable of more." },
+                ]}
+              />
+            </div>
+          </Reveal>
 
           <Reveal delay={0.1}>
             <div className="my-16 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
@@ -474,11 +482,18 @@ function FinalClose() {
             </div>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-lg text-white/70">
-            <Reveal><p>This Academy was built for that future.</p></Reveal>
-            <Reveal delay={0.1}><p>And if you are reading this right now…</p></Reveal>
-            <Reveal delay={0.2}><p className="text-white text-xl font-display">You already know you belong in rooms like this.</p></Reveal>
-          </div>
+          <Reveal delay={0.1}>
+            <div className="mt-12">
+              <StackedCards
+                eyebrow="A note to you — swipe"
+                items={[
+                  { kicker: "/ 01", text: "This Academy was built for that future." },
+                  { kicker: "/ 02", text: "And if you are reading this right now…" },
+                  { kicker: "/ 03", text: "You already know you belong in rooms like this." },
+                ]}
+              />
+            </div>
+          </Reveal>
 
           <Reveal delay={0.1}>
             <div className="my-14 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
