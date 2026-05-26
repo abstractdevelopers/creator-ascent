@@ -118,13 +118,28 @@ function Hero() {
             </div>
           </Reveal>
 
-          <div className="mt-14 space-y-5 text-base text-white/65 sm:text-lg">
+          <div className="mt-16 grid gap-6 sm:grid-cols-[88px_1fr] sm:gap-8">
             <Reveal delay={0.1}>
-              <p>The next generation of creators, voices, founders and personal brands is being built right now.</p>
+              <div className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-2">
+                <span className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">
+                  Now
+                </span>
+                <span className="h-px w-12 bg-[#E6A9FF]/40 sm:w-16" />
+              </div>
             </Reveal>
-            <Reveal delay={0.2}>
-              <p className="text-white">This is your opportunity to become one of them.</p>
-            </Reveal>
+            <div className="space-y-4">
+              <Reveal delay={0.15}>
+                <p className="text-[15px] leading-relaxed text-white/55 sm:text-base">
+                  The next generation of creators, voices, founders and personal
+                  brands is being built right now.
+                </p>
+              </Reveal>
+              <Reveal delay={0.25}>
+                <p className="font-display text-xl leading-snug text-white sm:text-2xl">
+                  This is your opportunity to become one of them.
+                </p>
+              </Reveal>
+            </div>
           </div>
         </div>
       </div>

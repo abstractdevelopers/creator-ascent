@@ -61,7 +61,13 @@ export function StackedCards({
               transition={{ type: "spring", stiffness: 260, damping: 30 }}
               className="absolute inset-0 cursor-grab active:cursor-grabbing"
             >
-              <div className="glass flex h-full w-full flex-col justify-between rounded-3xl p-7 sm:p-8">
+              <div
+                className="flex h-full w-full flex-col justify-between rounded-3xl border border-[#E6A9FF]/20 p-7 sm:p-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)]"
+                style={{
+                  background:
+                    "linear-gradient(160deg, #1a0a26 0%, #120516 60%, #0D0707 100%)",
+                }}
+              >
                 <div className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">
                   {item.kicker ?? `/ ${String(i + 1).padStart(2, "0")}`}
                 </div>
