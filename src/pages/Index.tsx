@@ -172,7 +172,7 @@ function UCAIntro({ apply }: { apply: () => void }) {
             <div className="my-16 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
           </Reveal>
 
-          <div className="space-y-6 text-lg text-white/70">
+          <div className="space-y-6 text-left text-lg text-white/70">
             <Reveal><p>The internet is changing fast.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-white">
@@ -208,7 +208,7 @@ function UCAIntro({ apply }: { apply: () => void }) {
 
         <div className="mx-auto max-w-[750px] text-center">
           <Reveal delay={0.2}>
-            <div className="mt-16 space-y-3 text-white/70">
+            <div className="mt-16 space-y-3 text-left text-white/70">
               <p>This is not open to everybody.</p>
               <p className="text-white text-xl font-display">
                 And that is exactly why you should take this seriously.
@@ -277,7 +277,7 @@ function Community({ apply }: { apply: () => void }) {
             </h2>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-lg text-white/70">
+          <div className="mt-12 space-y-6 text-left text-lg text-white/70">
             <Reveal><p>Once accepted, you enter a private Creator Community.</p></Reveal>
             <Reveal delay={0.1}>
               <p>Filled with ambitious creators, future founders, digital builders and upcoming influencers.</p>
@@ -301,7 +301,7 @@ function Community({ apply }: { apply: () => void }) {
           </div>
         </div>
 
-        <div className="mx-auto mt-16 max-w-[750px] space-y-4 text-center text-white/75">
+        <div className="mx-auto mt-16 max-w-[750px] space-y-4 text-left text-white/75">
           <Reveal><p>This is where creators build momentum before the Academy officially starts.</p></Reveal>
           <Reveal delay={0.1}><p className="text-white font-display text-xl">The energy inside will not be normal.</p></Reveal>
         </div>
@@ -375,7 +375,7 @@ function Structure({ apply }: { apply: () => void }) {
             </h2>
           </Reveal>
 
-          <div className="mt-10 space-y-5 text-lg text-white/70">
+          <div className="mt-10 space-y-5 text-left text-lg text-white/70">
             <Reveal><p>This is where your creator journey actually begins.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-white">
@@ -487,7 +487,7 @@ function FinalClose({ apply }: { apply: () => void }) {
             </h2>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-lg text-white/70">
+          <div className="mt-12 space-y-6 text-left text-lg text-white/70">
             <Reveal><p>The internet will reward people who know how to:</p></Reveal>
           </div>
 
@@ -518,7 +518,7 @@ function FinalClose({ apply }: { apply: () => void }) {
             <div className="my-14 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
           </Reveal>
 
-          <div className="space-y-4 text-white/70">
+          <div className="space-y-4 text-left text-white/70">
             <Reveal><p className="text-white font-display text-2xl">Applications close June 15.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-sm">
