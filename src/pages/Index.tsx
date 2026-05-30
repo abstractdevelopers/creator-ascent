@@ -87,7 +87,7 @@ function Hero({ apply }: { apply: () => void }) {
                 BECOME THE NEXT PUBLIC FIGURE
               </button>
               <a
-                href="#final"
+                href="/replaced"
                 className="btn-ghost rounded-full px-7 py-4 text-center text-sm font-medium"
               >
                 Get replaced by AI
