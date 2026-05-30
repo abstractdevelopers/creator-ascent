@@ -30,7 +30,7 @@ export function StackedCards({
     <div className="w-full select-none">
       {eyebrow && (
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">
+          <span className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF] sm:text-sm">
             {eyebrow}
           </span>
           <span className="text-[10px] tracking-[0.3em] text-white/40">

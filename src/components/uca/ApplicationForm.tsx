@@ -50,13 +50,7 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
   const update = <K extends keyof typeof form>(k: K, v: string) =>
     setForm((p) => ({ ...p, [k]: v }));
 
-  const valid =
-    form.full_name.trim() &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
-    form.current_focus &&
-    form.reason.trim().length >= 10 &&
-    form.skill_interest &&
-    form.commitment;
+  const valid = !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -158,9 +152,8 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
             <div className="my-8 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
 
             <div className="space-y-7">
-              <Field label="Full Name" required>
+              <Field label="Full Name">
                 <input
-                  required
                   value={form.full_name}
                   onChange={(e) => update("full_name", e.target.value)}
                   className={inputCls}
@@ -170,12 +163,10 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
 
               <Field
                 label="Email Address"
-                required
                 hint="All Academy updates, community access information, and selection notices will be sent here."
               >
                 <input
-                  required
-                  type="email"
+                  type="text"
                   value={form.email}
                   onChange={(e) => update("email", e.target.value)}
                   className={inputCls}
@@ -183,7 +174,7 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
                 />
               </Field>
 
-              <Field label="Which best describes you right now?" required>
+              <Field label="Which best describes you right now?">
                 <RadioList
                   name="current_focus"
                   value={form.current_focus}
@@ -194,11 +185,9 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
 
               <Field
                 label="Why do you want to join UCA?"
-                required
                 hint="Be honest. We are not looking for perfect answers — we are looking for intention."
               >
                 <textarea
-                  required
                   value={form.reason}
                   onChange={(e) => update("reason", e.target.value)}
                   rows={4}
@@ -209,7 +198,6 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
 
               <Field
                 label="Which creator skill interests you the most right now?"
-                required
               >
                 <RadioList
                   name="skill_interest"
@@ -221,7 +209,6 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
 
               <Field
                 label="If selected, how committed are you to participating in the community and Academy experience?"
-                required
               >
                 <RadioList
                   name="commitment"
