@@ -3,10 +3,10 @@ import { useState } from "react";
 import { Reveal } from "@/components/uca/Reveal";
 import { StackedCards } from "@/components/uca/StackedCards";
 import { ApplicationForm } from "@/components/uca/ApplicationForm";
-import section1 from "@/assets/section1.jpg";
-import section2 from "@/assets/section2.jpg";
-import section3 from "@/assets/section3.jpg";
-import section4 from "@/assets/section4.jpg";
+import section1 from "@/assets/section1.webp";
+import section2 from "@/assets/section2.webp";
+import section3 from "@/assets/section3.webp";
+import section4 from "@/assets/section4.webp";
 
 export default function Index() {
   const [open, setOpen] = useState(false);
@@ -42,6 +42,7 @@ function KeyArt({
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
+        fetchPriority={priority ? "high" : "low"}
         className="block h-auto w-full select-none"
         draggable={false}
       />
@@ -70,12 +71,7 @@ function Hero({ apply }: { apply: () => void }) {
               EVERYTHING
               <br />
               EXCEPT{" "}
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(135deg, #E6A9FF 0%, #fff 100%)" }}
-              >
-                YOU.
-              </span>
+              <span style={{ color: "#E6A9FF" }}>YOU.</span>
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
@@ -99,25 +95,17 @@ function Hero({ apply }: { apply: () => void }) {
             </div>
           </Reveal>
 
-          <div className="mt-16 grid gap-6 text-left sm:grid-cols-[88px_1fr] sm:gap-8">
-            <Reveal delay={0.1}>
-              <div className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-2">
-                <span className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">Now</span>
-                <span className="h-px w-12 bg-[#E6A9FF]/40 sm:w-16" />
-              </div>
+          <div className="mt-16 space-y-4 text-center">
+            <Reveal delay={0.15}>
+              <p className="text-[15px] leading-relaxed text-white/55 sm:text-base">
+                The next generation of creators, voices, founders and personal brands is being built right now.
+              </p>
             </Reveal>
-            <div className="space-y-4">
-              <Reveal delay={0.15}>
-                <p className="text-[15px] leading-relaxed text-white/55 sm:text-base">
-                  The next generation of creators, voices, founders and personal brands is being built right now.
-                </p>
-              </Reveal>
-              <Reveal delay={0.25}>
-                <p className="font-display text-xl leading-snug text-white sm:text-2xl">
-                  This is your opportunity to become one of them.
-                </p>
-              </Reveal>
-            </div>
+            <Reveal delay={0.25}>
+              <p className="font-display text-xl leading-snug text-white sm:text-2xl">
+                This is your opportunity to become one of them.
+              </p>
+            </Reveal>
           </div>
         </div>
       </div>
@@ -143,9 +131,6 @@ function UCAIntro({ apply }: { apply: () => void }) {
 
       <div className="relative bg-[#0D0707] px-6 pb-24 pt-12 sm:pt-20">
         <div className="mx-auto max-w-[750px] text-center">
-          <Reveal>
-            <span className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">Chapter 01</span>
-          </Reveal>
           <Reveal delay={0.1}>
             <h2 className="font-display mt-5 text-4xl leading-[1.02] sm:text-5xl md:text-6xl">
               A 3-month accelerator
@@ -172,7 +157,7 @@ function UCAIntro({ apply }: { apply: () => void }) {
             <div className="my-16 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
           </Reveal>
 
-          <div className="space-y-6 text-left text-lg text-white/70">
+          <div className="space-y-6 text-center text-lg text-white/70">
             <Reveal><p>The internet is changing fast.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-white">
@@ -208,7 +193,7 @@ function UCAIntro({ apply }: { apply: () => void }) {
 
         <div className="mx-auto max-w-[750px] text-center">
           <Reveal delay={0.2}>
-            <div className="mt-16 space-y-3 text-left text-white/70">
+            <div className="mt-16 space-y-3 text-center text-white/70">
               <p>This is not open to everybody.</p>
               <p className="text-white text-xl font-display">
                 And that is exactly why you should take this seriously.
@@ -261,7 +246,7 @@ function Community({ apply }: { apply: () => void }) {
         <div className="mx-auto max-w-[750px] text-center">
           <Reveal>
             <span className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">
-              Chapter 02 — Community
+              Community
             </span>
           </Reveal>
           <Reveal delay={0.1}>
@@ -277,7 +262,7 @@ function Community({ apply }: { apply: () => void }) {
             </h2>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-left text-lg text-white/70">
+          <div className="mt-12 space-y-6 text-center text-lg text-white/70">
             <Reveal><p>Once accepted, you enter a private Creator Community.</p></Reveal>
             <Reveal delay={0.1}>
               <p>Filled with ambitious creators, future founders, digital builders and upcoming influencers.</p>
@@ -301,7 +286,7 @@ function Community({ apply }: { apply: () => void }) {
           </div>
         </div>
 
-        <div className="mx-auto mt-16 max-w-[750px] space-y-4 text-left text-white/75">
+        <div className="mx-auto mt-16 max-w-[750px] space-y-4 text-center text-white/75">
           <Reveal><p>This is where creators build momentum before the Academy officially starts.</p></Reveal>
           <Reveal delay={0.1}><p className="text-white font-display text-xl">The energy inside will not be normal.</p></Reveal>
         </div>
@@ -366,16 +351,13 @@ function Structure({ apply }: { apply: () => void }) {
 
       <div className="relative bg-[#0D0707] px-6 pb-24 pt-12 sm:pt-20">
         <div className="mx-auto max-w-[750px] text-center">
-          <Reveal>
-            <span className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">Chapter 03</span>
-          </Reveal>
           <Reveal delay={0.1}>
             <h2 className="font-display mt-5 text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
               UCA<br />STRUCTURE
             </h2>
           </Reveal>
 
-          <div className="mt-10 space-y-5 text-left text-lg text-white/70">
+          <div className="mt-10 space-y-5 text-center text-lg text-white/70">
             <Reveal><p>This is where your creator journey actually begins.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-white">
@@ -472,11 +454,6 @@ function FinalClose({ apply }: { apply: () => void }) {
     <section id="final" className="relative">
       <div className="relative bg-[#0D0707] px-6 pb-24 pt-24 sm:pt-32">
         <div className="mx-auto max-w-[750px] text-center">
-          <Reveal>
-            <span className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">
-              The Final Chapter
-            </span>
-          </Reveal>
           <Reveal delay={0.1}>
             <h2 className="font-display mt-6 text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
               A NEW
@@ -487,7 +464,7 @@ function FinalClose({ apply }: { apply: () => void }) {
             </h2>
           </Reveal>
 
-          <div className="mt-12 space-y-6 text-left text-lg text-white/70">
+          <div className="mt-12 space-y-6 text-center text-lg text-white/70">
             <Reveal><p>The internet will reward people who know how to:</p></Reveal>
           </div>
 
@@ -518,7 +495,7 @@ function FinalClose({ apply }: { apply: () => void }) {
             <div className="my-14 h-px w-full bg-gradient-to-r from-transparent via-[#E6A9FF]/30 to-transparent" />
           </Reveal>
 
-          <div className="space-y-4 text-left text-white/70">
+          <div className="space-y-4 text-center text-white/70">
             <Reveal><p className="text-white font-display text-2xl">Applications close June 15.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-sm">
