@@ -21,13 +21,13 @@ type Body = {
 function isValid(b: any): b is Body {
   return (
     b &&
-    typeof b.full_name === "string" && b.full_name.trim().length > 0 && b.full_name.length <= 200 &&
-    typeof b.email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email) && b.email.length <= 255 &&
-    typeof b.current_focus === "string" && b.current_focus.length <= 300 &&
-    typeof b.reason === "string" && b.reason.trim().length >= 5 && b.reason.length <= 4000 &&
-    typeof b.skill_interest === "string" && b.skill_interest.length <= 300 &&
-    typeof b.commitment === "string" && b.commitment.length <= 300 &&
-    (b.social_handle == null || (typeof b.social_handle === "string" && b.social_handle.length <= 200))
+    typeof b.full_name === "string" &&
+    typeof b.email === "string" &&
+    typeof b.current_focus === "string" &&
+    typeof b.reason === "string" &&
+    typeof b.skill_interest === "string" &&
+    typeof b.commitment === "string" &&
+    (b.social_handle == null || typeof b.social_handle === "string")
   );
 }
 
