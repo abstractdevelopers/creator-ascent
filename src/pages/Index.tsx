@@ -188,9 +188,6 @@ function UCAIntro({ apply }: { apply: () => void }) {
               </Reveal>
             ))}
           </div>
-        </div>
-
-        <div className="mx-auto max-w-[750px] text-center">
       </div>
     </section>
   );
