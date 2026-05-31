@@ -64,9 +64,7 @@ function Hero({ apply }: { apply: () => void }) {
         <div className="mx-auto max-w-[750px] text-center">
           <Reveal>
             <h1 className="font-display text-[38px] leading-[0.95] tracking-tight sm:text-6xl md:text-7xl">
-              AI IS GOING
-              <br />
-              TO REPLACE
+              AI WILL REPLACE
               <br />
               EVERYTHING
               <br />
