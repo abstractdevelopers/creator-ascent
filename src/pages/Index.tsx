@@ -375,7 +375,7 @@ function Structure({ apply }: { apply: () => void }) {
               <Reveal key={l.t} delay={0.03 * i}>
                 <div className="glass min-w-[260px] max-w-[280px] snap-start rounded-2xl p-6">
                   <div className="text-[10px] tracking-[0.3em] text-[#E6A9FF]">
-                    MODULE / {String(i + 1).padStart(2, "0")}
+                    PATH / {String(i + 1).padStart(2, "0")}
                   </div>
                   <h3 className="font-display mt-3 text-xl leading-tight">{l.t}</h3>
                   <p className="mt-3 text-sm text-white/60">{l.d}</p>
