@@ -189,29 +189,6 @@ function UCAIntro({ apply }: { apply: () => void }) {
             ))}
           </div>
         </div>
-
-        <div className="mx-auto max-w-[750px] text-center">
-          <Reveal delay={0.2}>
-            <div className="mt-16 space-y-3 text-center text-white/70">
-              <p>This is not open to everybody.</p>
-              <p className="text-white text-xl font-display">
-                And that is exactly why you should take this seriously.
-              </p>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.3}>
-            <button
-              onClick={apply}
-              className="btn-primary mt-10 inline-block rounded-full px-7 py-4 text-sm font-semibold tracking-wide"
-            >
-              APPLY FOR ACCESS
-            </button>
-            <p className="mx-auto mt-5 max-w-md text-xs leading-relaxed text-white/45">
-              Applications close June 15. Selected applicants get early access to the private Creator Community before launch.
-            </p>
-          </Reveal>
-        </div>
       </div>
     </section>
   );
@@ -241,7 +218,7 @@ function FirstMonthFree({ apply }: { apply: () => void }) {
               </p>
 
               <div className="mt-8 inline-flex items-baseline gap-2 rounded-full border border-[#E6A9FF]/30 bg-white/[0.04] px-6 py-3">
-                <span className="font-display text-4xl" style={{ color: "#E6A9FF" }}>FREE</span>
+                <span className="font-display text-4xl font-bold text-white">FREE</span>
                 <span className="text-sm text-white/60">· Zero risk</span>
               </div>
 
@@ -495,7 +472,7 @@ function Structure({ apply }: { apply: () => void }) {
                 onClick={apply}
                 className="btn-primary mt-8 inline-block rounded-full px-7 py-4 text-sm font-semibold tracking-wide"
               >
-                APPLY BEFORE JUNE 15
+                APPLY NOW
               </button>
               <p className="mx-auto mt-5 max-w-md text-xs leading-relaxed text-white/45">
                 Apply. Get selected. Enjoy the free experience. Opt out when dissatisfied.
@@ -556,10 +533,9 @@ function FinalClose({ apply }: { apply: () => void }) {
           </Reveal>
 
           <div className="space-y-4 text-center text-white/70">
-            <Reveal><p className="text-white font-display text-2xl">Applications close June 15.</p></Reveal>
             <Reveal delay={0.1}>
               <p className="text-sm">
-                Once registration closes, selected applicants receive access to the private Creator Community before the Academy officially begins.
+                Once selected, applicants receive access to the private Creator Community before the Academy officially begins.
               </p>
             </Reveal>
           </div>
