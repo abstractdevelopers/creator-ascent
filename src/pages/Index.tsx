@@ -15,6 +15,7 @@ export default function Index() {
     <main className="relative overflow-x-hidden bg-[#0D0707] text-white">
       <Hero apply={apply} />
       <UCAIntro apply={apply} />
+      <FirstMonthFree apply={apply} />
       <Community apply={apply} />
       <Structure apply={apply} />
       <FinalClose apply={apply} />
@@ -64,9 +65,7 @@ function Hero({ apply }: { apply: () => void }) {
         <div className="mx-auto max-w-[750px] text-center">
           <Reveal>
             <h1 className="font-display text-[38px] leading-[0.95] tracking-tight sm:text-6xl md:text-7xl">
-              AI IS GOING
-              <br />
-              TO REPLACE
+              AI WILL REPLACE
               <br />
               EVERYTHING
               <br />
@@ -219,6 +218,63 @@ function UCAIntro({ apply }: { apply: () => void }) {
 }
 
 /* ───────────────────── COMMUNITY ───────────────────── */
+function FirstMonthFree({ apply }: { apply: () => void }) {
+  return (
+    <section className="relative bg-[#0D0707] px-6 py-20">
+      <div className="mx-auto max-w-[750px]">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-3xl border border-[#E6A9FF]/25 bg-gradient-to-br from-[#1a0a1f] via-[#0D0707] to-[#0D0707] p-8 text-center sm:p-12">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full opacity-30 blur-3xl"
+              style={{ background: "#E6A9FF" }}
+            />
+            <div className="relative">
+              <div className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">
+                First Month Free
+              </div>
+              <h3 className="font-display mt-4 text-3xl leading-tight sm:text-4xl">
+                Try before you buy.
+              </h3>
+              <p className="mx-auto mt-5 max-w-md text-white/70">
+                Full access to the entire first month — completely free. No hidden tricks.
+              </p>
+
+              <div className="mt-8 inline-flex items-baseline gap-2 rounded-full border border-[#E6A9FF]/30 bg-white/[0.04] px-6 py-3">
+                <span className="font-display text-4xl" style={{ color: "#E6A9FF" }}>FREE</span>
+                <span className="text-sm text-white/60">· Zero risk</span>
+              </div>
+
+              <div className="mt-10 grid gap-3 text-left sm:grid-cols-2">
+                {[
+                  "Full access to community",
+                  "Resources & launch environment",
+                  "See if UCA is for you",
+                  "Before spending a cent",
+                ].map((t, i) => (
+                  <Reveal key={t} delay={0.05 * i}>
+                    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <span className="text-[#E6A9FF]">✓</span>
+                      <span className="text-sm text-white/85">{t}</span>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+
+              <button
+                onClick={apply}
+                className="btn-primary mt-10 inline-block rounded-full px-7 py-4 text-sm font-semibold tracking-wide"
+              >
+                APPLY NOW
+              </button>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 function Community({ apply }: { apply: () => void }) {
   const experiences = [
     "Creator challenges",
@@ -253,12 +309,8 @@ function Community({ apply }: { apply: () => void }) {
             <h2 className="font-display mt-5 text-4xl leading-[1.02] sm:text-5xl md:text-6xl">
               Before the Academy begins,
               <br />
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(135deg, #E6A9FF, #fff)" }}
-              >
-                the movement begins.
-              </span>
+              <span className="font-bold" style={{ color: "#E6A9FF" }}>the movement</span>
+              <span className="font-bold text-white"> begins.</span>
             </h2>
           </Reveal>
 
@@ -269,6 +321,14 @@ function Community({ apply }: { apply: () => void }) {
             </Reveal>
             <Reveal delay={0.2}><p className="text-white">Preparing for the next era of the internet.</p></Reveal>
           </div>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-[750px] text-center">
+          <Reveal>
+            <p className="font-display text-xl text-white sm:text-2xl">
+              Inside the community, there will be
+            </p>
+          </Reveal>
         </div>
 
         <div className="mt-14 overflow-x-auto hide-scrollbar">
@@ -373,7 +433,7 @@ function Structure({ apply }: { apply: () => void }) {
               <Reveal key={l.t} delay={0.03 * i}>
                 <div className="glass min-w-[260px] max-w-[280px] snap-start rounded-2xl p-6">
                   <div className="text-[10px] tracking-[0.3em] text-[#E6A9FF]">
-                    MODULE / {String(i + 1).padStart(2, "0")}
+                    PATH / {String(i + 1).padStart(2, "0")}
                   </div>
                   <h3 className="font-display mt-3 text-xl leading-tight">{l.t}</h3>
                   <p className="mt-3 text-sm text-white/60">{l.d}</p>
