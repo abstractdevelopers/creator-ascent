@@ -251,12 +251,8 @@ function Community({ apply }: { apply: () => void }) {
             <h2 className="font-display mt-5 text-4xl leading-[1.02] sm:text-5xl md:text-6xl">
               Before the Academy begins,
               <br />
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(135deg, #E6A9FF, #fff)" }}
-              >
-                the movement begins.
-              </span>
+              <span className="font-bold" style={{ color: "#E6A9FF" }}>the movement</span>
+              <span className="font-bold text-white"> begins.</span>
             </h2>
           </Reveal>
 
@@ -267,6 +263,14 @@ function Community({ apply }: { apply: () => void }) {
             </Reveal>
             <Reveal delay={0.2}><p className="text-white">Preparing for the next era of the internet.</p></Reveal>
           </div>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-[750px] text-center">
+          <Reveal>
+            <p className="font-display text-xl text-white sm:text-2xl">
+              Inside the community, there will be
+            </p>
+          </Reveal>
         </div>
 
         <div className="mt-14 overflow-x-auto hide-scrollbar">
