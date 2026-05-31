@@ -188,6 +188,7 @@ function UCAIntro({ apply }: { apply: () => void }) {
               </Reveal>
             ))}
           </div>
+        </div>
       </div>
     </section>
   );
