@@ -15,6 +15,7 @@ export default function Index() {
     <main className="relative overflow-x-hidden bg-[#0D0707] text-white">
       <Hero apply={apply} />
       <UCAIntro apply={apply} />
+      <FirstMonthFree apply={apply} />
       <Community apply={apply} />
       <Structure apply={apply} />
       <FinalClose apply={apply} />
