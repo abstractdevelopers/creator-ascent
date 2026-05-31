@@ -218,6 +218,63 @@ function UCAIntro({ apply }: { apply: () => void }) {
 }
 
 /* ───────────────────── COMMUNITY ───────────────────── */
+function FirstMonthFree({ apply }: { apply: () => void }) {
+  return (
+    <section className="relative bg-[#0D0707] px-6 py-20">
+      <div className="mx-auto max-w-[750px]">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-3xl border border-[#E6A9FF]/25 bg-gradient-to-br from-[#1a0a1f] via-[#0D0707] to-[#0D0707] p-8 text-center sm:p-12">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full opacity-30 blur-3xl"
+              style={{ background: "#E6A9FF" }}
+            />
+            <div className="relative">
+              <div className="text-xs uppercase tracking-[0.4em] text-[#E6A9FF]">
+                First Month Free
+              </div>
+              <h3 className="font-display mt-4 text-3xl leading-tight sm:text-4xl">
+                Try before you buy.
+              </h3>
+              <p className="mx-auto mt-5 max-w-md text-white/70">
+                Full access to the entire first month — completely free. No hidden tricks.
+              </p>
+
+              <div className="mt-8 inline-flex items-baseline gap-2 rounded-full border border-[#E6A9FF]/30 bg-white/[0.04] px-6 py-3">
+                <span className="font-display text-4xl" style={{ color: "#E6A9FF" }}>FREE</span>
+                <span className="text-sm text-white/60">· Zero risk</span>
+              </div>
+
+              <div className="mt-10 grid gap-3 text-left sm:grid-cols-2">
+                {[
+                  "Full access to community",
+                  "Resources & launch environment",
+                  "See if UCA is for you",
+                  "Before spending a cent",
+                ].map((t, i) => (
+                  <Reveal key={t} delay={0.05 * i}>
+                    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <span className="text-[#E6A9FF]">✓</span>
+                      <span className="text-sm text-white/85">{t}</span>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+
+              <button
+                onClick={apply}
+                className="btn-primary mt-10 inline-block rounded-full px-7 py-4 text-sm font-semibold tracking-wide"
+              >
+                APPLY NOW
+              </button>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
 function Community({ apply }: { apply: () => void }) {
   const experiences = [
     "Creator challenges",
