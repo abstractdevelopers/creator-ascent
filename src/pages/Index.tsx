@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Instagram } from "lucide-react";
 import { Reveal } from "@/components/uca/Reveal";
 import { StackedCards } from "@/components/uca/StackedCards";
 import { ApplicationForm } from "@/components/uca/ApplicationForm";
@@ -455,7 +456,7 @@ function Structure({ apply }: { apply: () => void }) {
                 Continue into the remaining two-month program for just
               </p>
               <div className="mt-6 flex items-baseline justify-center gap-2">
-                <span className="font-display text-6xl">₦30,000</span>
+                <span className="font-display text-6xl">₦15,000</span>
                 <span className="text-white/60">/ month</span>
               </div>
               <div className="mt-10 space-y-3 text-white/70">
@@ -570,7 +571,15 @@ function Footer() {
           Unify Creator Academy
         </span>
         <div className="flex flex-wrap items-center gap-5">
-          <a href="#" className="transition hover:text-white">Instagram</a>
+          <a
+            href="https://instagram.com/unifycreatoracademy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 transition hover:text-white"
+          >
+            <Instagram size={16} />
+            Instagram
+          </a>
           <a href="#" className="transition hover:text-white">X</a>
           <a href="#" className="transition hover:text-white">TikTok</a>
           <a href="#" className="transition hover:text-white">YouTube</a>
