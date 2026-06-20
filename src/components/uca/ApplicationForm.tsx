@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Instagram } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -122,6 +123,25 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
             <p className="mt-8 font-display text-lg text-[#E6A9FF]">
               The next generation of creators is being built now.
             </p>
+
+            <div className="mt-10 rounded-2xl border border-[#E6A9FF]/20 bg-white/[0.03] p-6 text-center">
+              <p className="text-sm text-white/70">
+                Follow us on Instagram for the latest updates
+              </p>
+              <a
+                href="https://instagram.com/unifycreatoracademy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-[#E6A9FF]/30 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white transition hover:border-[#E6A9FF]/60 hover:bg-white/[0.07]"
+              >
+                <Instagram size={18} className="text-[#E6A9FF]" />
+                @unifycreatoracademy
+              </a>
+              <p className="mt-4 text-xs text-white/50">
+                Also check your email for confirmation and future updates.
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => onOpenChange(false)}
