@@ -385,7 +385,7 @@ function BroadcastComposer(p: ComposerProps) {
         </button>
 
         <p className="text-[11px] leading-relaxed text-white/45">
-          Sender: noreply@uca.launchverse.online. Make sure this domain is verified
+          Sender: noreplys@launchverse.app. Make sure this domain is verified
           in Resend or sends will fail.
         </p>
       </aside>
