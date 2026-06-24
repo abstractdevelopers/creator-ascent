@@ -33,7 +33,7 @@ export default function Admin() {
   const [uploadingKind, setUploadingKind] = useState<null | "header" | "footer" | "inline">(null);
   const [inlineAssets, setInlineAssets] = useState<string[]>([]);
 
-  const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+  const FN_BASE = `/api`;
   const authHeaders = {
     "x-admin-password": password,
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,

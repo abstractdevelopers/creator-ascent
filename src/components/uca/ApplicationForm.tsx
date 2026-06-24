@@ -58,8 +58,10 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
     if (!valid || submitting) return;
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("submit-application", {
-        body: {
+      const response = await fetch("/api/submit-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           full_name: form.full_name.trim(),
           email: form.email.trim().toLowerCase(),
           current_focus: form.current_focus,
@@ -67,9 +69,10 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
           skill_interest: form.skill_interest,
           commitment: form.commitment,
           social_handle: form.social_handle.trim() || null,
-        },
+        }),
       });
-      if (error || !data?.ok) throw error || new Error("Submission failed");
+      const data = await response.json();
+      if (!response.ok || !data?.ok) throw new Error(data?.error || "Submission failed");
       setSubmitted(true);
     } catch (err) {
       console.error(err);
