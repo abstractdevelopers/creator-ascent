@@ -71,11 +71,18 @@ function render(opts: {
 }
 
 Deno.serve(async (req) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const password = req.headers.get("x-admin-password") ?? "";
   const expected = Deno.env.get("ADMIN_PASSWORD") ?? "";
+
+  if (!expected) {
+    console.error("ADMIN_PASSWORD secret is not set in Supabase");
+  }
+
   if (!expected || password !== expected) {
+    console.warn("Authorization failed: Incorrect or missing x-admin-password");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,16 +99,18 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "GET") {
-    // Basic connectivity check
+    console.log("Performing connectivity check...");
     try {
       const res = await fetch("https://api.resend.com/domains", {
         headers: { Authorization: `Bearer ${resendKey}` },
       });
       const data = await res.json();
+      console.log("Connectivity check result:", res.status, data);
       return new Response(JSON.stringify({ status: "ok", domains: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (e) {
+      console.error("Connectivity check failed:", e);
       return new Response(JSON.stringify({ error: (e as Error).message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -112,6 +121,7 @@ Deno.serve(async (req) => {
   let payload;
   try {
     payload = await req.json();
+    console.log("Payload received:", JSON.stringify(payload));
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
       status: 400,
@@ -147,8 +157,10 @@ Deno.serve(async (req) => {
   let recipients: Recipient[];
 
   if (testEmail) {
+    console.log(`Sending test email to: ${testEmail}`);
     recipients = [{ full_name: "Test User", email: testEmail, unsubscribe_token: "preview" }];
   } else if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+    console.log(`Fetching ${recipientIds.length} specific recipients...`);
     const { data, error } = await supabase
       .from("applications")
       .select("full_name,email,unsubscribe_token")
@@ -162,6 +174,7 @@ Deno.serve(async (req) => {
     }
     recipients = data || [];
   } else {
+    console.log("Fetching all active subscribers...");
     const { data, error } = await supabase
       .from("applications")
       .select("full_name,email,unsubscribe_token")
@@ -182,10 +195,12 @@ Deno.serve(async (req) => {
     });
   }
 
+  console.log(`Total recipients to process: ${recipients.length}`);
   let sent = 0;
   const failed: { email: string; error: string }[] = [];
 
   for (const r of recipients) {
+    console.log(`Attempting send to: ${r.email}`);
     const { first, last } = splitName(r.full_name);
     const unsubscribeUrl = `${siteOrigin}/unsubscribe?token=${r.unsubscribe_token}`;
     const html = render({
