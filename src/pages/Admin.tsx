@@ -30,7 +30,8 @@ export default function Admin() {
   const [testEmail, setTestEmail] = useState("");
   const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
-  const [uploadingKind, setUploadingKind] = useState<null | "header" | "footer">(null);
+  const [uploadingKind, setUploadingKind] = useState<null | "header" | "footer" | "inline">(null);
+  const [inlineAssets, setInlineAssets] = useState<string[]>([]);
 
   const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
   const authHeaders = {
@@ -58,7 +59,7 @@ export default function Admin() {
     }
   }
 
-  async function uploadImage(file: File, kind: "header" | "footer") {
+  async function uploadImage(file: File, kind: "header" | "footer" | "inline") {
     setUploadingKind(kind);
     try {
       const b64: string = await new Promise((resolve, reject) => {
@@ -81,8 +82,11 @@ export default function Admin() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload failed");
+
       if (kind === "header") setHeaderUrl(json.url);
-      else setFooterUrl(json.url);
+      else if (kind === "footer") setFooterUrl(json.url);
+      else setInlineAssets(prev => [json.url, ...prev]);
+
       toast.success(`${kind} image uploaded`);
     } catch (e: any) {
       toast.error(e.message);
@@ -273,6 +277,7 @@ export default function Admin() {
             setSelectedRecipients={setSelectedRecipients}
             sending={sending}
             uploadingKind={uploadingKind}
+            inlineAssets={inlineAssets}
             onUpload={uploadImage}
             onSend={sendBroadcast}
           />
@@ -306,8 +311,9 @@ type ComposerProps = {
   selectedRecipients: Set<string>;
   setSelectedRecipients: (s: Set<string>) => void;
   sending: boolean;
-  uploadingKind: null | "header" | "footer";
-  onUpload: (f: File, kind: "header" | "footer") => void;
+  uploadingKind: null | "header" | "footer" | "inline";
+  inlineAssets: string[];
+  onUpload: (f: File, kind: "header" | "footer" | "inline") => void;
   onSend: (test: boolean) => void;
 };
 
@@ -338,6 +344,11 @@ function BroadcastComposer(p: ComposerProps) {
 
   const effectiveCount = p.selectedRecipients.size > 0 ? p.selectedRecipients.size : activeApps.length;
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
@@ -358,10 +369,8 @@ function BroadcastComposer(p: ComposerProps) {
             Message body
           </label>
           <p className="mt-1 text-xs text-white/50">
-            Use <code className="text-[#E6A9FF]">{"{{first_name}}"}</code>,{" "}
-            <code className="text-[#E6A9FF]">{"{{last_name}}"}</code>, or{" "}
-            <code className="text-[#E6A9FF]">{"{{full_name}}"}</code> to personalize.
-            Blank lines = paragraph breaks.
+            Use <code className="text-[#E6A9FF]">{"{{first_name}}"}</code> to personalize.
+            Insert inline images with <code className="text-[#E6A9FF]">[[img:URL]]</code>.
           </p>
           <textarea
             value={p.body}
@@ -386,6 +395,40 @@ function BroadcastComposer(p: ComposerProps) {
             onClear={() => p.setFooterUrl("")}
             onFile={(f) => p.onUpload(f, "footer")}
           />
+        </div>
+
+        <div className="border-t border-white/10 pt-5">
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Inline Image Assets
+          </label>
+          <div className="mt-3 flex flex-wrap gap-3">
+             <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 text-[10px] text-white/40 hover:border-[#E6A9FF]/40">
+              {p.uploadingKind === "inline" ? "..." : "+ Upload"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) p.onUpload(f, "inline");
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {p.inlineAssets.map((url, i) => (
+              <button
+                key={i}
+                onClick={() => copyToClipboard(`[[img:${url}]]`)}
+                className="group relative h-20 w-20 overflow-hidden rounded-xl border border-white/10"
+                title="Click to copy tag"
+              >
+                <img src={url} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition group-hover:opacity-100">
+                  <span className="text-[10px] font-bold text-[#E6A9FF]">COPY TAG</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="border-t border-white/10 pt-5">

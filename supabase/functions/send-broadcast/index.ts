@@ -41,19 +41,26 @@ function render(opts: {
 
   const bodyHtml = escapeHtml(merged)
     .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 16px;line-height:1.7;color:#f5e9ff;">${p.replace(/\n/g, "<br/>")}</p>`)
-    .join("");
+    .map((p) => {
+      // Process inline images: [[img:URL]]
+      const processed = p.replaceAll(/\[\[img:(.*?)\]\]/g, (_, url) => {
+        return `</p><img src="${url}" alt="" style="display:block;width:100%;max-width:100%;height:auto;margin:24px 0;border-radius:12px;"/><p style="margin:0 0 16px;line-height:1.7;color:#f5e9ff;">`;
+      });
+      return `<p style="margin:0 0 16px;line-height:1.7;color:#f5e9ff;">${processed.replace(/\n/g, "<br/>")}</p>`;
+    })
+    .join("")
+    .replaceAll("<p style=\"margin:0 0 16px;line-height:1.7;color:#f5e9ff;\"></p>", "");
 
-  return `<!doctype html><html><body style="margin:0;padding:0;background:${BRAND_BG};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;">
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body style="margin:0;padding:0;background:${BRAND_BG};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_BG};padding:32px 16px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#16090F;border:1px solid rgba(230,169,255,0.18);border-radius:18px;overflow:hidden;">
-        ${opts.headerImageUrl ? `<tr><td><img src="${opts.headerImageUrl}" alt="" style="display:block;width:100%;height:auto;"/></td></tr>` : ""}
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#16090F;border:1px solid rgba(230,169,255,0.18);border-radius:18px;overflow:hidden;">
+        ${opts.headerImageUrl ? `<tr><td><img src="${opts.headerImageUrl}" alt="" style="display:block;width:100%;max-width:100%;height:auto;"/></td></tr>` : ""}
         <tr><td style="padding:32px 32px 8px;">
           <div style="font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:${BRAND_ACCENT};">Unify Creator Academy</div>
         </td></tr>
         <tr><td style="padding:16px 32px 32px;font-size:15px;color:#f5e9ff;">${bodyHtml}</td></tr>
-        ${opts.footerImageUrl ? `<tr><td><img src="${opts.footerImageUrl}" alt="" style="display:block;width:100%;height:auto;"/></td></tr>` : ""}
+        ${opts.footerImageUrl ? `<tr><td><img src="${opts.footerImageUrl}" alt="" style="display:block;width:100%;max-width:100%;height:auto;"/></td></tr>` : ""}
         <tr><td style="padding:20px 32px;border-top:1px solid rgba(230,169,255,0.12);font-size:12px;color:rgba(245,233,255,0.55);text-align:center;">
           You're receiving this because you applied to Unify Creator Academy.<br/>
           <a href="${opts.unsubscribeUrl}" style="color:${BRAND_ACCENT};text-decoration:underline;">Unsubscribe</a>
