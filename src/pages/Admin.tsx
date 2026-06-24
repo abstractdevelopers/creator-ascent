@@ -11,6 +11,7 @@ type Application = {
   commitment: string;
   social_handle: string | null;
   created_at: string;
+  unsubscribed?: boolean;
 };
 
 export default function Admin() {
@@ -27,6 +28,7 @@ export default function Admin() {
   const [headerUrl, setHeaderUrl] = useState("");
   const [footerUrl, setFooterUrl] = useState("");
   const [testEmail, setTestEmail] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [uploadingKind, setUploadingKind] = useState<null | "header" | "footer">(null);
 
@@ -98,9 +100,16 @@ export default function Admin() {
       toast.error("Enter a test email first");
       return;
     }
+
+    const activeApps = apps?.filter(a => !a.unsubscribed) || [];
+    const targetIds = !test && selectedRecipients.size > 0
+      ? Array.from(selectedRecipients)
+      : undefined;
+
+    const count = targetIds ? targetIds.length : activeApps.length;
+
     if (!test) {
-      const active = apps?.filter((a: any) => !a.unsubscribed).length ?? 0;
-      if (!confirm(`Send to ${active} subscriber${active === 1 ? "" : "s"}?`)) return;
+      if (!confirm(`Send to ${count} subscriber${count === 1 ? "" : "s"}?`)) return;
     }
     setSending(true);
     try {
@@ -113,6 +122,7 @@ export default function Admin() {
           headerImageUrl: headerUrl || undefined,
           footerImageUrl: footerUrl || undefined,
           testEmail: test ? testEmail : undefined,
+          recipientIds: targetIds,
         }),
       });
       const json = await res.json();
@@ -248,6 +258,7 @@ export default function Admin() {
 
         {apps && tab === "broadcast" && (
           <BroadcastComposer
+            apps={apps}
             subject={subject}
             setSubject={setSubject}
             body={body}
@@ -258,11 +269,12 @@ export default function Admin() {
             setFooterUrl={setFooterUrl}
             testEmail={testEmail}
             setTestEmail={setTestEmail}
+            selectedRecipients={selectedRecipients}
+            setSelectedRecipients={setSelectedRecipients}
             sending={sending}
             uploadingKind={uploadingKind}
             onUpload={uploadImage}
             onSend={sendBroadcast}
-            recipientCount={apps.filter((a: any) => !a.unsubscribed).length}
           />
         )}
       </div>
@@ -280,6 +292,7 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 type ComposerProps = {
+  apps: Application[];
   subject: string;
   setSubject: (s: string) => void;
   body: string;
@@ -290,14 +303,41 @@ type ComposerProps = {
   setFooterUrl: (s: string) => void;
   testEmail: string;
   setTestEmail: (s: string) => void;
+  selectedRecipients: Set<string>;
+  setSelectedRecipients: (s: Set<string>) => void;
   sending: boolean;
   uploadingKind: null | "header" | "footer";
   onUpload: (f: File, kind: "header" | "footer") => void;
   onSend: (test: boolean) => void;
-  recipientCount: number;
 };
 
 function BroadcastComposer(p: ComposerProps) {
+  const [search, setSearch] = useState("");
+
+  const activeApps = p.apps.filter(a => !a.unsubscribed);
+
+  const filteredApps = activeApps.filter(a =>
+    a.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    a.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggleRecipient = (id: string) => {
+    const next = new Set(p.selectedRecipients);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    p.setSelectedRecipients(next);
+  };
+
+  const selectNew = () => {
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const newIds = activeApps
+      .filter(a => new Date(a.created_at) > fortyEightHoursAgo)
+      .map(a => a.id);
+    p.setSelectedRecipients(new Set(newIds));
+  };
+
+  const effectiveCount = p.selectedRecipients.size > 0 ? p.selectedRecipients.size : activeApps.length;
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
@@ -347,13 +387,73 @@ function BroadcastComposer(p: ComposerProps) {
             onFile={(f) => p.onUpload(f, "footer")}
           />
         </div>
+
+        <div className="border-t border-white/10 pt-5">
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Target Recipients
+          </label>
+          <p className="mt-1 text-xs text-white/50">
+            Select specific people or leave empty to send to all active subscribers.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => p.setSelectedRecipients(new Set(activeApps.map(a => a.id)))}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-wider hover:bg-white/10"
+            >
+              Select All
+            </button>
+            <button
+              onClick={selectNew}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-wider hover:bg-white/10"
+            >
+              New (Last 48h)
+            </button>
+            <button
+              onClick={() => p.setSelectedRecipients(new Set())}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-wider hover:bg-white/10"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search subscribers..."
+              className="w-full border-b border-white/10 bg-transparent px-4 py-2 text-xs focus:outline-none"
+            />
+            <div className="max-h-[300px] overflow-y-auto">
+              {filteredApps.map(a => (
+                <label
+                  key={a.id}
+                  className="flex cursor-pointer items-center gap-3 px-4 py-2 text-xs hover:bg-white/5"
+                >
+                  <input
+                    type="checkbox"
+                    checked={p.selectedRecipients.has(a.id)}
+                    onChange={() => toggleRecipient(a.id)}
+                    className="accent-[#E6A9FF]"
+                  />
+                  <div className="flex-1 overflow-hidden">
+                    <div className="truncate font-medium">{a.full_name}</div>
+                    <div className="truncate text-[10px] text-white/40">{a.email}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <aside className="space-y-5 rounded-2xl border border-[#E6A9FF]/20 bg-white/[0.03] p-6">
+      <aside className="sticky top-10 h-fit space-y-5 rounded-2xl border border-[#E6A9FF]/20 bg-white/[0.03] p-6">
         <div>
           <div className="text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">Audience</div>
-          <div className="mt-2 text-2xl font-display">{p.recipientCount}</div>
-          <div className="text-xs text-white/50">active subscribers</div>
+          <div className="mt-2 text-2xl font-display">{effectiveCount}</div>
+          <div className="text-xs text-white/50">
+            {p.selectedRecipients.size > 0 ? "selected recipients" : "active subscribers (all)"}
+          </div>
         </div>
 
         <div>
@@ -381,7 +481,7 @@ function BroadcastComposer(p: ComposerProps) {
           disabled={p.sending}
           className="btn-primary w-full rounded-full px-5 py-3 text-sm font-semibold disabled:opacity-50"
         >
-          {p.sending ? "Sending…" : `Send to ${p.recipientCount} subscriber${p.recipientCount === 1 ? "" : "s"}`}
+          {p.sending ? "Sending…" : `Send to ${effectiveCount} subscriber${effectiveCount === 1 ? "" : "s"}`}
         </button>
 
         <p className="text-[11px] leading-relaxed text-white/45">

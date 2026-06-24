@@ -112,12 +112,13 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { subject, body, headerImageUrl, footerImageUrl, testEmail } = payload as {
+  const { subject, body, headerImageUrl, footerImageUrl, testEmail, recipientIds } = payload as {
     subject?: string;
     body?: string;
     headerImageUrl?: string;
     footerImageUrl?: string;
     testEmail?: string;
+    recipientIds?: string[];
   };
 
   if (!subject || !body) {
@@ -140,6 +141,19 @@ Deno.serve(async (req) => {
 
   if (testEmail) {
     recipients = [{ full_name: "Test User", email: testEmail, unsubscribe_token: "preview" }];
+  } else if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+    const { data, error } = await supabase
+      .from("applications")
+      .select("full_name,email,unsubscribe_token")
+      .in("id", recipientIds)
+      .eq("unsubscribed", false);
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    recipients = data || [];
   } else {
     const { data, error } = await supabase
       .from("applications")
