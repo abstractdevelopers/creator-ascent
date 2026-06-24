@@ -1,0 +1,1 @@
+ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS unsubscribed boolean NOT NULL DEFAULT false; ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS unsubscribe_token uuid NOT NULL DEFAULT gen_random_uuid(); CREATE UNIQUE INDEX IF NOT EXISTS applications_unsubscribe_token_key ON public.applications(unsubscribe_token);

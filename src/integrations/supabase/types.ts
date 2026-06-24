@@ -25,6 +25,8 @@ export type Database = {
           reason: string
           skill_interest: string
           social_handle: string | null
+          unsubscribe_token: string
+          unsubscribed: boolean
         }
         Insert: {
           commitment: string
@@ -36,6 +38,8 @@ export type Database = {
           reason: string
           skill_interest: string
           social_handle?: string | null
+          unsubscribe_token?: string
+          unsubscribed?: boolean
         }
         Update: {
           commitment?: string
@@ -47,6 +51,8 @@ export type Database = {
           reason?: string
           skill_interest?: string
           social_handle?: string | null
+          unsubscribe_token?: string
+          unsubscribed?: boolean
         }
         Relationships: []
       }
