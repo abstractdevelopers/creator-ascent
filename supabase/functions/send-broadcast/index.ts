@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FROM = "Unify Creator Academy <noreply@uca.launchverse.online>";
+const FROM = "Unify Creator Academy <noreply@launchverse.app>";
 const BRAND_BG = "#0D0707";
 const BRAND_ACCENT = "#E6A9FF";
 
