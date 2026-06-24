@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.submit-application]
 verify_jwt = false
+
+[functions.send-broadcast]
+verify_jwt = false
+
+[functions.email-upload]
+verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false

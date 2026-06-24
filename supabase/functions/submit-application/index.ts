@@ -88,6 +88,10 @@ Deno.serve(async (req) => {
 
   // Fire off Resend notification (don't fail submission if email fails)
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  if (!RESEND_API_KEY) {
+    console.error("RESEND_API_KEY not set");
+  }
+
   if (RESEND_API_KEY) {
     try {
       const html = `

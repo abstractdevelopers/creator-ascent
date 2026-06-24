@@ -77,10 +77,29 @@ Deno.serve(async (req) => {
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {
+    console.error("RESEND_API_KEY not set in environment");
     return new Response(JSON.stringify({ error: "RESEND_API_KEY not set" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  if (req.method === "GET") {
+    // Basic connectivity check
+    try {
+      const res = await fetch("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${resendKey}` },
+      });
+      const data = await res.json();
+      return new Response(JSON.stringify({ status: "ok", domains: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   let payload;
@@ -180,7 +199,8 @@ Deno.serve(async (req) => {
       });
       if (!res.ok) {
         const t = await res.text();
-        failed.push({ email: r.email, error: t.slice(0, 200) });
+        console.error(`Resend error for ${r.email}:`, t);
+        failed.push({ email: r.email, error: t.slice(0, 500) });
       } else {
         sent++;
       }
