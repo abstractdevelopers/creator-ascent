@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 
 type Application = {
   id: string;
@@ -18,19 +19,31 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [tab, setTab] = useState<"apps" | "broadcast">("apps");
+
+  // Broadcast composer state
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("Hi {{first_name}},\n\n");
+  const [headerUrl, setHeaderUrl] = useState("");
+  const [footerUrl, setFooterUrl] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [uploadingKind, setUploadingKind] = useState<null | "header" | "footer">(null);
+
+  const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+  const authHeaders = {
+    "x-admin-password": password,
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  };
 
   async function load(e?: React.FormEvent) {
     e?.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-applications`;
-      const res = await fetch(url, {
+      const res = await fetch(`${FN_BASE}/admin-applications`, {
         method: "GET",
-        headers: {
-          "x-admin-password": password,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
+        headers: authHeaders,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
@@ -43,6 +56,79 @@ export default function Admin() {
     }
   }
 
+  async function uploadImage(file: File, kind: "header" | "footer") {
+    setUploadingKind(kind);
+    try {
+      const b64: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = (r.result as string).split(",")[1];
+          resolve(s);
+        };
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+      });
+      const res = await fetch(`${FN_BASE}/email-upload`, {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileBase64: b64,
+          fileName: file.name,
+          contentType: file.type,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Upload failed");
+      if (kind === "header") setHeaderUrl(json.url);
+      else setFooterUrl(json.url);
+      toast.success(`${kind} image uploaded`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploadingKind(null);
+    }
+  }
+
+  async function sendBroadcast(test: boolean) {
+    if (!subject.trim() || !body.trim()) {
+      toast.error("Subject and body are required");
+      return;
+    }
+    if (test && !testEmail) {
+      toast.error("Enter a test email first");
+      return;
+    }
+    if (!test) {
+      const active = apps?.filter((a: any) => !a.unsubscribed).length ?? 0;
+      if (!confirm(`Send to ${active} subscriber${active === 1 ? "" : "s"}?`)) return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch(`${FN_BASE}/send-broadcast`, {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject,
+          body,
+          headerImageUrl: headerUrl || undefined,
+          footerImageUrl: footerUrl || undefined,
+          testEmail: test ? testEmail : undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Send failed");
+      toast.success(
+        test
+          ? `Test sent to ${testEmail}`
+          : `Sent ${json.sent}/${json.total} (${json.failed_count} failed)`,
+      );
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#0D0707] px-4 py-10 text-white sm:px-8">
       <div className="mx-auto max-w-5xl">
@@ -51,14 +137,39 @@ export default function Admin() {
             <span className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">
               UCA Admin
             </span>
-            <h1 className="font-display mt-2 text-3xl sm:text-4xl">Applications</h1>
+            <h1 className="font-display mt-2 text-3xl sm:text-4xl">
+              {tab === "apps" ? "Applications" : "Broadcast"}
+            </h1>
           </div>
           {apps && (
-            <div className="text-sm text-white/60">
-              {apps.length} submission{apps.length === 1 ? "" : "s"}
+            <div className="flex items-center gap-3 text-sm text-white/60">
+              <span>
+                {apps.length} submission{apps.length === 1 ? "" : "s"}
+              </span>
             </div>
           )}
         </header>
+
+        {apps && (
+          <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+            <button
+              onClick={() => setTab("apps")}
+              className={`rounded-full px-4 py-1.5 text-sm transition ${
+                tab === "apps" ? "bg-[#E6A9FF] text-black" : "text-white/70"
+              }`}
+            >
+              Applications
+            </button>
+            <button
+              onClick={() => setTab("broadcast")}
+              className={`rounded-full px-4 py-1.5 text-sm transition ${
+                tab === "broadcast" ? "bg-[#E6A9FF] text-black" : "text-white/70"
+              }`}
+            >
+              Broadcast
+            </button>
+          </div>
+        )}
 
         {!apps && (
           <form
@@ -85,13 +196,13 @@ export default function Admin() {
           </form>
         )}
 
-        {apps && apps.length === 0 && (
+        {apps && tab === "apps" && apps.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-white/60">
             No applications yet.
           </div>
         )}
 
-        {apps && apps.length > 0 && (
+        {apps && tab === "apps" && apps.length > 0 && (
           <div className="space-y-3">
             {apps.map((a) => {
               const open = expanded === a.id;
@@ -134,6 +245,26 @@ export default function Admin() {
             })}
           </div>
         )}
+
+        {apps && tab === "broadcast" && (
+          <BroadcastComposer
+            subject={subject}
+            setSubject={setSubject}
+            body={body}
+            setBody={setBody}
+            headerUrl={headerUrl}
+            setHeaderUrl={setHeaderUrl}
+            footerUrl={footerUrl}
+            setFooterUrl={setFooterUrl}
+            testEmail={testEmail}
+            setTestEmail={setTestEmail}
+            sending={sending}
+            uploadingKind={uploadingKind}
+            onUpload={uploadImage}
+            onSend={sendBroadcast}
+            recipientCount={apps.filter((a: any) => !a.unsubscribed).length}
+          />
+        )}
       </div>
     </main>
   );
@@ -144,6 +275,167 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">{label}</dt>
       <dd className="mt-1 text-white/85">{value}</dd>
+    </div>
+  );
+}
+
+type ComposerProps = {
+  subject: string;
+  setSubject: (s: string) => void;
+  body: string;
+  setBody: (s: string) => void;
+  headerUrl: string;
+  setHeaderUrl: (s: string) => void;
+  footerUrl: string;
+  setFooterUrl: (s: string) => void;
+  testEmail: string;
+  setTestEmail: (s: string) => void;
+  sending: boolean;
+  uploadingKind: null | "header" | "footer";
+  onUpload: (f: File, kind: "header" | "footer") => void;
+  onSend: (test: boolean) => void;
+  recipientCount: number;
+};
+
+function BroadcastComposer(p: ComposerProps) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+        <div>
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Subject
+          </label>
+          <input
+            value={p.subject}
+            onChange={(e) => p.setSubject(e.target.value)}
+            placeholder="e.g. Welcome to UCA, {{first_name}}"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm focus:border-[#E6A9FF]/60 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Message body
+          </label>
+          <p className="mt-1 text-xs text-white/50">
+            Use <code className="text-[#E6A9FF]">{"{{first_name}}"}</code>,{" "}
+            <code className="text-[#E6A9FF]">{"{{last_name}}"}</code>, or{" "}
+            <code className="text-[#E6A9FF]">{"{{full_name}}"}</code> to personalize.
+            Blank lines = paragraph breaks.
+          </p>
+          <textarea
+            value={p.body}
+            onChange={(e) => p.setBody(e.target.value)}
+            rows={14}
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm leading-relaxed focus:border-[#E6A9FF]/60 focus:outline-none"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ImageUploader
+            label="Header image"
+            url={p.headerUrl}
+            uploading={p.uploadingKind === "header"}
+            onClear={() => p.setHeaderUrl("")}
+            onFile={(f) => p.onUpload(f, "header")}
+          />
+          <ImageUploader
+            label="Footer image"
+            url={p.footerUrl}
+            uploading={p.uploadingKind === "footer"}
+            onClear={() => p.setFooterUrl("")}
+            onFile={(f) => p.onUpload(f, "footer")}
+          />
+        </div>
+      </div>
+
+      <aside className="space-y-5 rounded-2xl border border-[#E6A9FF]/20 bg-white/[0.03] p-6">
+        <div>
+          <div className="text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">Audience</div>
+          <div className="mt-2 text-2xl font-display">{p.recipientCount}</div>
+          <div className="text-xs text-white/50">active subscribers</div>
+        </div>
+
+        <div>
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Send test
+          </label>
+          <input
+            type="email"
+            value={p.testEmail}
+            onChange={(e) => p.setTestEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm focus:border-[#E6A9FF]/60 focus:outline-none"
+          />
+          <button
+            onClick={() => p.onSend(true)}
+            disabled={p.sending}
+            className="mt-2 w-full rounded-full border border-[#E6A9FF]/40 px-4 py-2 text-sm text-[#E6A9FF] hover:bg-[#E6A9FF]/10 disabled:opacity-50"
+          >
+            {p.sending ? "Sending…" : "Send test"}
+          </button>
+        </div>
+
+        <button
+          onClick={() => p.onSend(false)}
+          disabled={p.sending}
+          className="btn-primary w-full rounded-full px-5 py-3 text-sm font-semibold disabled:opacity-50"
+        >
+          {p.sending ? "Sending…" : `Send to ${p.recipientCount} subscriber${p.recipientCount === 1 ? "" : "s"}`}
+        </button>
+
+        <p className="text-[11px] leading-relaxed text-white/45">
+          Sender: noreply@uca.launchverse.online. Make sure this domain is verified
+          in Resend or sends will fail.
+        </p>
+      </aside>
+    </div>
+  );
+}
+
+function ImageUploader({
+  label,
+  url,
+  uploading,
+  onFile,
+  onClear,
+}: {
+  label: string;
+  url: string;
+  uploading: boolean;
+  onFile: (f: File) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+        {label}
+      </label>
+      {url ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
+          <img src={url} alt="" className="block w-full" />
+          <button
+            onClick={onClear}
+            className="block w-full bg-white/[0.04] px-3 py-2 text-xs text-white/60 hover:text-white"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <label className="mt-2 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-xs text-white/50 hover:border-[#E6A9FF]/40">
+          {uploading ? "Uploading…" : "Click to upload"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onFile(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Index from "@/pages/Index";
 import Admin from "@/pages/Admin";
 import Replaced from "@/pages/Replaced";
+import Unsubscribe from "@/pages/Unsubscribe";
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/" element={<Index />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/replaced" element={<Replaced />} />
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="*" element={<Index />} />
       </Routes>
       <Toaster theme="dark" position="top-center" />
