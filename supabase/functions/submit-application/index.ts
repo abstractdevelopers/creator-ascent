@@ -6,7 +6,8 @@ const corsHeaders = {
 };
 
 const NOTIFY_TO = "unifycreatoracademy@gmail.com";
-const FROM = "UCA Waitlist <noreply@uca.launchverse.online>";
+const PRIMARY_FROM = "UCA Waitlist <noreply@uca.launchverse.online>";
+const FALLBACK_FROM = "UCA Waitlist <noreply@launchverse.app>";
 
 type Body = {
   full_name: string;
@@ -112,21 +113,36 @@ Deno.serve(async (req) => {
           <p style="margin-top:24px;font-size:12px;color:#888;">Submitted ${new Date().toISOString()}</p>
         </div>
       `;
-      const r = await fetch("https://api.resend.com/emails", {
+      const emailPayload = {
+        to: [NOTIFY_TO],
+        reply_to: payload.email,
+        subject: `New UCA Application — ${payload.full_name}`,
+        html,
+      };
+
+      let r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          from: FROM,
-          to: [NOTIFY_TO],
-          reply_to: payload.email,
-          subject: `New UCA Application — ${payload.full_name}`,
-          html,
-        }),
+        body: JSON.stringify({ from: PRIMARY_FROM, ...emailPayload }),
       });
-      if (!r.ok) console.error("Resend error:", r.status, await r.text());
+      if (!r.ok) {
+        const firstError = await r.text();
+        if (firstError.toLowerCase().includes("not verified")) {
+          console.warn("Primary Resend domain is not verified yet; retrying notification with fallback domain.");
+          r = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ from: FALLBACK_FROM, ...emailPayload }),
+          });
+        }
+        if (!r.ok) console.error("Resend error:", r.status, await r.text());
+      }
     } catch (e) {
       console.error("Email send failed:", e);
     }
