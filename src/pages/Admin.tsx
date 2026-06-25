@@ -184,11 +184,16 @@ export default function Admin() {
       if (!res.ok) throw new Error(json.error || "Resend check failed");
       const domains = Array.isArray(json.domains?.data) ? json.domains.data : [];
       const ucaDomain = domains.find((d: any) => d.name === "uca.launchverse.online");
+      const fallbackDomain = domains.find((d: any) => d.name === "launchverse.app");
       if (ucaDomain?.status === "verified") {
         toast.success("Resend is connected and uca.launchverse.online is verified");
+      } else if (fallbackDomain?.status === "verified") {
+        toast.message("Email can send now using the verified fallback domain", {
+          description: "Verify uca.launchverse.online in Resend to switch the sender to your UCA domain.",
+        });
       } else {
-        toast.message("Resend responded, but verify uca.launchverse.online in Resend", {
-          description: "Emails must send from noreply@uca.launchverse.online.",
+        toast.message("Resend responded, but no usable sending domain is verified", {
+          description: "Verify uca.launchverse.online in Resend before sending broadcasts.",
         });
       }
     } catch (e: any) {
@@ -538,7 +543,8 @@ function BroadcastComposer(p: ComposerProps) {
         </button>
 
         <p className="text-[11px] leading-relaxed text-white/45">
-          Sender: noreply@uca.launchverse.online. This exact domain must be verified in Resend.
+          Preferred sender: noreply@uca.launchverse.online. Until that domain is verified in Resend,
+          the system automatically falls back to noreply@launchverse.app so emails can still send.
           Every broadcast includes an unsubscribe link.
         </p>
       </aside>
