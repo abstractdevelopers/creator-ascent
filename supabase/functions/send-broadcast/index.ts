@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-const PRIMARY_FROM = "Unify Creator Academy <noreply@uca.launchverse.online>";
+const PRIMARY_FROM = "Unify Creator Academy <noreply@launchverse.app>";
 const FALLBACK_FROM = "Unify Creator Academy <noreply@launchverse.app>";
 const PUBLIC_ORIGIN = "https://uca.launchverse.online";
 const BRAND_BG = "#0D0707";
