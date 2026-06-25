@@ -140,8 +140,10 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({ from: FALLBACK_FROM, ...emailPayload }),
           });
+          if (!r.ok) console.error("Resend error:", r.status, await r.text());
+        } else {
+          console.error("Resend error:", r.status, firstError);
         }
-        if (!r.ok) console.error("Resend error:", r.status, await r.text());
       }
     } catch (e) {
       console.error("Email send failed:", e);
