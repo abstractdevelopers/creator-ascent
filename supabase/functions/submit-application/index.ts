@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 const NOTIFY_TO = "unifycreatoracademy@gmail.com";
-const PRIMARY_FROM = "UCA Waitlist <noreply@launchverse.app>";
-const FALLBACK_FROM = "UCA Waitlist <noreply@launchverse.app>";
+const FROM_ADDRESS = "UCA Waitlist <uca@launchverse.site>";
 
 type Body = {
   full_name: string;
@@ -87,13 +86,13 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Fire off Resend notification (don't fail submission if email fails)
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  if (!RESEND_API_KEY) {
-    console.error("RESEND_API_KEY not set");
+  // Fire off SendByte notification (don't fail submission if email fails)
+  const SENDBYTE_API_KEY = Deno.env.get("SENDBYTE_API_KEY");
+  if (!SENDBYTE_API_KEY) {
+    console.error("SENDBYTE_API_KEY not set");
   }
 
-  if (RESEND_API_KEY) {
+  if (SENDBYTE_API_KEY) {
     try {
       const html = `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0D0707;color:#fff;border-radius:16px;">
@@ -114,36 +113,23 @@ Deno.serve(async (req) => {
         </div>
       `;
       const emailPayload = {
+        from: FROM_ADDRESS,
         to: [NOTIFY_TO],
         reply_to: payload.email,
         subject: `New UCA Application — ${payload.full_name}`,
         html,
       };
 
-      let r = await fetch("https://api.resend.com/emails", {
+      const r = await fetch("https://api.sendbyte.africa/v1/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
+          Authorization: `Bearer ${SENDBYTE_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ from: PRIMARY_FROM, ...emailPayload }),
+        body: JSON.stringify(emailPayload),
       });
       if (!r.ok) {
-        const firstError = await r.text();
-        if (firstError.toLowerCase().includes("not verified")) {
-          console.warn("Primary Resend domain is not verified yet; retrying notification with fallback domain.");
-          r = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${RESEND_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ from: FALLBACK_FROM, ...emailPayload }),
-          });
-          if (!r.ok) console.error("Resend error:", r.status, await r.text());
-        } else {
-          console.error("Resend error:", r.status, firstError);
-        }
+        console.error("SendByte error:", r.status, await r.text());
       }
     } catch (e) {
       console.error("Email send failed:", e);

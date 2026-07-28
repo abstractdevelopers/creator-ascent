@@ -7,9 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-const PRIMARY_FROM = "Unify Creator Academy <noreply@launchverse.app>";
-const FALLBACK_FROM = "Unify Creator Academy <noreply@launchverse.app>";
-const PUBLIC_ORIGIN = "https://uca.launchverse.online";
+const FROM_ADDRESS = "Unify Creator Academy <uca@launchverse.site>";
+const PUBLIC_ORIGIN = "https://uca.launchverse.site";
+const SENDBYTE_ENDPOINT = "https://api.sendbyte.africa/v1/emails";
 const BRAND_BG = "#0D0707";
 const BRAND_ACCENT = "#E6A9FF";
 
@@ -98,14 +98,14 @@ function render(opts: {
   </table></body></html>`;
 }
 
-async function resendRequest(resendKey: string, payload: Record<string, unknown>) {
-  const res = await fetch("https://api.resend.com/emails", {
+async function sendbyteRequest(apiKey: string, payload: Record<string, unknown>) {
+  const res = await fetch(SENDBYTE_ENDPOINT, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${resendKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ from: FROM_ADDRESS, ...payload }),
   });
 
   if (!res.ok) {
@@ -117,26 +117,10 @@ async function resendRequest(resendKey: string, payload: Record<string, unknown>
     } catch {
       // keep raw text
     }
-    throw new Error(`Resend ${res.status}: ${message}`.slice(0, 500));
+    throw new Error(`SendByte ${res.status}: ${message}`.slice(0, 500));
   }
 
   return res.json();
-}
-
-async function sendWithVerifiedFallback(resendKey: string, payload: Record<string, unknown>) {
-  try {
-    await resendRequest(resendKey, { ...payload, from: PRIMARY_FROM });
-    return { from: PRIMARY_FROM, usedFallback: false };
-  } catch (error) {
-    const message = (error as Error).message;
-    if (!message.toLowerCase().includes("not verified")) throw error;
-
-    console.warn(
-      `Primary Resend domain is not verified yet; retrying with verified fallback. ${message}`,
-    );
-    await resendRequest(resendKey, { ...payload, from: FALLBACK_FROM });
-    return { from: FALLBACK_FROM, usedFallback: true };
-  }
 }
 
 Deno.serve(async (req) => {
@@ -151,10 +135,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    console.error("RESEND_API_KEY not set in environment");
-    return new Response(JSON.stringify({ error: "RESEND_API_KEY not set" }), {
+  const sendbyteKey = Deno.env.get("SENDBYTE_API_KEY");
+  if (!sendbyteKey) {
+    console.error("SENDBYTE_API_KEY not set in environment");
+    return new Response(JSON.stringify({ error: "SENDBYTE_API_KEY not set" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -162,20 +146,19 @@ Deno.serve(async (req) => {
 
   if (req.method === "GET") {
     try {
-      const res = await fetch("https://api.resend.com/domains", {
-        headers: { Authorization: `Bearer ${resendKey}` },
+      // Ping SendByte with a HEAD-style probe by listing recent emails.
+      const res = await fetch("https://api.sendbyte.africa/v1/emails?limit=1", {
+        headers: { Authorization: `Bearer ${sendbyteKey}` },
       });
-      const data = await res.json();
+      const bodyText = await res.text();
       return new Response(
         JSON.stringify({
-          status: "ok",
-          domains: data,
-          primaryFrom: PRIMARY_FROM,
-          fallbackFrom: FALLBACK_FROM,
+          status: res.ok ? "ok" : "error",
+          httpStatus: res.status,
+          from: FROM_ADDRESS,
+          response: bodyText.slice(0, 500),
         }),
-        {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     } catch (e) {
       return new Response(JSON.stringify({ error: (e as Error).message }), {
@@ -262,7 +245,6 @@ Deno.serve(async (req) => {
   }
 
   let sent = 0;
-  let fallback_sent = 0;
   const failed: { email: string; error: string }[] = [];
 
   for (const r of recipients) {
@@ -279,7 +261,7 @@ Deno.serve(async (req) => {
     const mergedSubject = mergeTags(subject, first, last);
 
     try {
-      const result = await sendWithVerifiedFallback(resendKey, {
+      await sendbyteRequest(sendbyteKey, {
         to: [r.email],
         subject: mergedSubject,
         html,
@@ -289,10 +271,9 @@ Deno.serve(async (req) => {
         },
       });
       sent++;
-      if (result.usedFallback) fallback_sent++;
     } catch (e) {
       const message = (e as Error).message;
-      console.error(`Resend error for ${r.email}:`, message);
+      console.error(`SendByte error for ${r.email}:`, message);
       failed.push({ email: r.email, error: message });
     }
 
@@ -303,7 +284,7 @@ Deno.serve(async (req) => {
 
   const status = sent === 0 && failed.length > 0 ? 502 : 200;
   return new Response(
-    JSON.stringify({ total: recipients.length, sent, fallback_sent, failed_count: failed.length, failed }),
+    JSON.stringify({ total: recipients.length, sent, failed_count: failed.length, failed }),
     { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
