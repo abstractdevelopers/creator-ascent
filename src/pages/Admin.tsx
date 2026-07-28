@@ -181,19 +181,12 @@ export default function Admin() {
         headers: authHeaders,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Resend check failed");
-      const domains = Array.isArray(json.domains?.data) ? json.domains.data : [];
-      const ucaDomain = domains.find((d: any) => d.name === "uca.launchverse.online");
-      const fallbackDomain = domains.find((d: any) => d.name === "launchverse.app");
-      if (ucaDomain?.status === "verified") {
-        toast.success("Resend is connected and uca.launchverse.online is verified");
-      } else if (fallbackDomain?.status === "verified") {
-        toast.message("Email can send now using the verified fallback domain", {
-          description: "Verify uca.launchverse.online in Resend to switch the sender to your UCA domain.",
-        });
+      if (!res.ok) throw new Error(json.error || "SendByte check failed");
+      if (json.status === "ok") {
+        toast.success(`SendByte is connected. Sender: ${json.from}`);
       } else {
-        toast.message("Resend responded, but no usable sending domain is verified", {
-          description: "Verify uca.launchverse.online in Resend before sending broadcasts.",
+        toast.message("SendByte responded with an error", {
+          description: `HTTP ${json.httpStatus}: ${json.response ?? ""}`.slice(0, 200),
         });
       }
     } catch (e: any) {
@@ -539,13 +532,11 @@ function BroadcastComposer(p: ComposerProps) {
           disabled={p.checkingService}
           className="w-full rounded-full border border-white/15 px-4 py-2 text-xs text-white/60 hover:border-[#E6A9FF]/40 hover:text-white disabled:opacity-50"
         >
-          {p.checkingService ? "Checking…" : "Check Resend connection"}
+          {p.checkingService ? "Checking…" : "Check SendByte connection"}
         </button>
 
         <p className="text-[11px] leading-relaxed text-white/45">
-          Preferred sender: noreply@uca.launchverse.online. Until that domain is verified in Resend,
-          the system automatically falls back to noreply@launchverse.app so emails can still send.
-          Every broadcast includes an unsubscribe link.
+          Sender: uca@launchverse.site (via SendByte). Every broadcast includes an unsubscribe link.
         </p>
       </aside>
     </div>
