@@ -56,6 +56,92 @@ export type Database = {
         }
         Relationships: []
       }
+      email_broadcasts: {
+        Row: {
+          body: string
+          completed_at: string | null
+          created_at: string
+          failed_count: number
+          footer_image_url: string | null
+          header_image_url: string | null
+          id: string
+          recipient_ids: string[]
+          sent_count: number
+          status: string
+          subject: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          completed_at?: string | null
+          created_at?: string
+          failed_count?: number
+          footer_image_url?: string | null
+          header_image_url?: string | null
+          id?: string
+          recipient_ids?: string[]
+          sent_count?: number
+          status?: string
+          subject: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          completed_at?: string | null
+          created_at?: string
+          failed_count?: number
+          footer_image_url?: string | null
+          header_image_url?: string | null
+          id?: string
+          recipient_ids?: string[]
+          sent_count?: number
+          status?: string
+          subject?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_send_log: {
+        Row: {
+          application_id: string | null
+          broadcast_id: string
+          created_at: string
+          email: string
+          error: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          application_id?: string | null
+          broadcast_id: string
+          created_at?: string
+          email: string
+          error?: string | null
+          id?: string
+          status: string
+        }
+        Update: {
+          application_id?: string | null
+          broadcast_id?: string
+          created_at?: string
+          email?: string
+          error?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_log_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "email_broadcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
