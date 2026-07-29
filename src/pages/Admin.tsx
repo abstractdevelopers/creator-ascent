@@ -769,3 +769,215 @@ function InlineImageUploader({
     </label>
   );
 }
+
+function HistoryPanel({
+  broadcasts,
+  loading,
+  detail,
+  sending,
+  sendProgress,
+  onRefresh,
+  onOpen,
+  onClose,
+  onResume,
+}: {
+  broadcasts: Broadcast[] | null;
+  loading: boolean;
+  detail:
+    | {
+        broadcast: Broadcast & { body: string; recipient_ids: string[] };
+        logs: BroadcastLog[];
+        remaining: { id: string; email: string; full_name: string }[];
+      }
+    | null;
+  sending: boolean;
+  sendProgress: string | null;
+  onRefresh: () => void;
+  onOpen: (id: string) => void;
+  onClose: () => void;
+  onResume: (id: string) => void;
+}) {
+  if (detail) {
+    const b = detail.broadcast;
+    const failed = detail.logs.filter((l) => l.status === "failed");
+    const sent = detail.logs.filter((l) => l.status === "sent");
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onClose}
+            className="text-xs uppercase tracking-[0.25em] text-white/50 hover:text-white"
+          >
+            ← Back to history
+          </button>
+          {detail.remaining.length > 0 && b.status !== "completed" && (
+            <button
+              onClick={() => onResume(b.id)}
+              disabled={sending}
+              className="btn-primary rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {sending ? "Resuming…" : `Resume (${detail.remaining.length} left)`}
+            </button>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="font-display text-lg">{b.subject}</div>
+          <div className="mt-1 text-xs text-white/50">
+            {new Date(b.created_at).toLocaleString()} · status: {b.status}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Total" value={b.total} />
+            <Stat label="Sent" value={b.sent_count} tone="ok" />
+            <Stat label="Failed" value={b.failed_count} tone="err" />
+            <Stat label="Remaining" value={detail.remaining.length} tone="warn" />
+          </div>
+          {sendProgress && (
+            <div className="mt-4 rounded-xl border border-[#E6A9FF]/25 bg-[#E6A9FF]/5 px-3 py-2 text-xs text-[#E6A9FF]">
+              {sendProgress}
+            </div>
+          )}
+        </div>
+
+        {failed.length > 0 && (
+          <LogList title={`Failed (${failed.length})`} items={failed} tone="err" />
+        )}
+        {detail.remaining.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="mb-3 text-xs uppercase tracking-[0.25em] text-yellow-300">
+              Not yet sent ({detail.remaining.length})
+            </div>
+            <ul className="max-h-72 space-y-1 overflow-y-auto pr-1 text-sm">
+              {detail.remaining.map((r) => (
+                <li key={r.id} className="flex justify-between gap-3 text-white/75">
+                  <span className="truncate">{r.full_name}</span>
+                  <span className="truncate text-white/45">{r.email}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <LogList title={`Sent (${sent.length})`} items={sent} tone="ok" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-white/60">
+          Every broadcast is logged per recipient. Open one to see who received it, who failed, and resume where it stopped.
+        </p>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/70 hover:border-[#E6A9FF]/40 disabled:opacity-50"
+        >
+          {loading ? "Loading…" : "Refresh"}
+        </button>
+      </div>
+
+      {broadcasts && broadcasts.length === 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center text-white/60">
+          No broadcasts yet.
+        </div>
+      )}
+
+      {broadcasts?.map((b) => {
+        const remaining = b.total - b.sent_count - b.failed_count;
+        return (
+          <button
+            key={b.id}
+            onClick={() => onOpen(b.id)}
+            className="block w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left hover:border-[#E6A9FF]/30"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-display truncate text-lg">{b.subject}</div>
+                <div className="mt-1 text-xs text-white/45">
+                  {new Date(b.created_at).toLocaleString()}
+                </div>
+              </div>
+              <span
+                className={`rounded-full border px-3 py-0.5 text-[10px] uppercase tracking-[0.2em] ${
+                  b.status === "completed"
+                    ? "border-emerald-400/40 text-emerald-300"
+                    : "border-yellow-400/40 text-yellow-300"
+                }`}
+              >
+                {b.status}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-white/70">
+              <span>{b.sent_count}/{b.total} sent</span>
+              <span className="text-red-300">{b.failed_count} failed</span>
+              <span className="text-yellow-300">{Math.max(0, remaining)} remaining</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "ok" | "err" | "warn";
+}) {
+  const color =
+    tone === "ok"
+      ? "text-emerald-300"
+      : tone === "err"
+      ? "text-red-300"
+      : tone === "warn"
+      ? "text-yellow-300"
+      : "text-white";
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+      <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">{label}</div>
+      <div className={`mt-1 font-display text-2xl ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function LogList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: BroadcastLog[];
+  tone: "ok" | "err";
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div
+        className={`mb-3 text-xs uppercase tracking-[0.25em] ${
+          tone === "err" ? "text-red-300" : "text-emerald-300"
+        }`}
+      >
+        {title}
+      </div>
+      <ul className="max-h-72 space-y-1 overflow-y-auto pr-1 text-sm">
+        {items.map((l) => (
+          <li key={l.id} className="flex flex-col gap-0.5 border-b border-white/5 py-1.5">
+            <div className="flex justify-between gap-3">
+              <span className="truncate text-white/85">{l.email}</span>
+              <span className="shrink-0 text-xs text-white/40">
+                {new Date(l.created_at).toLocaleTimeString()}
+              </span>
+            </div>
+            {l.error && (
+              <span className="truncate text-xs text-red-300/80">{l.error}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
