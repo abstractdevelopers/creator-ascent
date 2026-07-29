@@ -185,81 +185,174 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { subject, body, headerImageUrl, footerImageUrl, testEmail, recipientIds } = payload as {
+  const {
+    subject,
+    body,
+    headerImageUrl,
+    footerImageUrl,
+    testEmail,
+    recipientIds,
+    broadcastId,
+    maxBatch,
+  } = payload as {
     subject?: string;
     body?: string;
     headerImageUrl?: string;
     footerImageUrl?: string;
     testEmail?: string;
     recipientIds?: string[];
+    broadcastId?: string;
+    maxBatch?: number;
   };
-
-  if (!subject || !body) {
-    return new Response(JSON.stringify({ error: "subject and body required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  let recipients: Recipient[];
-
+  // ---- TEST send: no broadcast record, no logging ----
   if (testEmail) {
-    recipients = [{ full_name: "Test User", email: testEmail, unsubscribe_token: "preview" }];
-  } else {
-    let query = supabase
-      .from("applications")
-      .select("id,full_name,email,unsubscribe_token")
-      .eq("unsubscribed", false);
-
-    if (Array.isArray(recipientIds) && recipientIds.length > 0) {
-      query = query.in("id", recipientIds);
+    if (!subject || !body) {
+      return new Response(JSON.stringify({ error: "subject and body required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const { first, last } = splitName("Test User");
+    const unsubscribeUrl = `${PUBLIC_ORIGIN}/unsubscribe?token=preview`;
+    const html = render({ bodyText: body, first, last, headerImageUrl, footerImageUrl, unsubscribeUrl });
+    try {
+      await sendbyteRequest(sendbyteKey, {
+        to: [testEmail],
+        subject: mergeTags(subject, first, last),
+        html,
+        headers: {
+          "List-Unsubscribe": `<${unsubscribeUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      });
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
 
-    const { data, error } = await query;
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+  // ---- BROADCAST send (new or resume) ----
+  let broadcast: {
+    id: string;
+    subject: string;
+    body: string;
+    header_image_url: string | null;
+    footer_image_url: string | null;
+    recipient_ids: string[];
+  };
+
+  if (broadcastId) {
+    const { data, error } = await supabase
+      .from("email_broadcasts")
+      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids")
+      .eq("id", broadcastId)
+      .maybeSingle();
+    if (error || !data) {
+      return new Response(JSON.stringify({ error: "Broadcast not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    broadcast = data as typeof broadcast;
+  } else {
+    if (!subject || !body) {
+      return new Response(JSON.stringify({ error: "subject and body required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
+      return new Response(JSON.stringify({ error: "No recipients selected" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data, error } = await supabase
+      .from("email_broadcasts")
+      .insert({
+        subject,
+        body,
+        header_image_url: headerImageUrl ?? null,
+        footer_image_url: footerImageUrl ?? null,
+        recipient_ids: recipientIds,
+        total: recipientIds.length,
+        status: "in_progress",
+      })
+      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids")
+      .single();
+    if (error || !data) {
+      return new Response(JSON.stringify({ error: error?.message || "Insert failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const seen = new Set<string>();
-    recipients = ((data || []) as Recipient[]).filter((r) => {
-      const k = r.email.toLowerCase();
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+    broadcast = data as typeof broadcast;
   }
 
-  if (recipients.length === 0) {
-    return new Response(JSON.stringify({ error: "No recipients selected" }), {
-      status: 400,
+  // Load recipients
+  const { data: apps, error: appsErr } = await supabase
+    .from("applications")
+    .select("id,full_name,email,unsubscribe_token,unsubscribed")
+    .in("id", broadcast.recipient_ids);
+  if (appsErr) {
+    return new Response(JSON.stringify({ error: appsErr.message }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  let sent = 0;
-  const failed: { email: string; error: string }[] = [];
+  // Already-sent lookup (dedupe by lowercased email)
+  const { data: sentLogs } = await supabase
+    .from("email_send_log")
+    .select("email")
+    .eq("broadcast_id", broadcast.id)
+    .eq("status", "sent");
+  const alreadySent = new Set((sentLogs ?? []).map((r) => r.email.toLowerCase()));
 
-  for (const r of recipients) {
+  const seen = new Set<string>();
+  const queue: Recipient[] = [];
+  for (const a of (apps ?? []) as (Recipient & { unsubscribed?: boolean })[]) {
+    const key = a.email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (a.unsubscribed) continue;
+    if (alreadySent.has(key)) continue;
+    queue.push(a);
+  }
+
+  const limit = Math.max(1, Math.min(maxBatch ?? 80, 150));
+  const batch = queue.slice(0, limit);
+  const remaining = queue.length - batch.length;
+
+  let sentThisBatch = 0;
+  let failedThisBatch = 0;
+
+  for (const r of batch) {
     const { first, last } = splitName(r.full_name);
     const unsubscribeUrl = `${PUBLIC_ORIGIN}/unsubscribe?token=${r.unsubscribe_token}`;
     const html = render({
-      bodyText: body,
+      bodyText: broadcast.body,
       first,
       last,
-      headerImageUrl,
-      footerImageUrl,
+      headerImageUrl: broadcast.header_image_url ?? undefined,
+      footerImageUrl: broadcast.footer_image_url ?? undefined,
       unsubscribeUrl,
     });
-    const mergedSubject = mergeTags(subject, first, last);
+    const mergedSubject = mergeTags(broadcast.subject, first, last);
 
+    let status: "sent" | "failed" = "sent";
+    let errorMessage: string | null = null;
     try {
       await sendbyteRequest(sendbyteKey, {
         to: [r.email],
@@ -270,21 +363,63 @@ Deno.serve(async (req) => {
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
       });
-      sent++;
+      sentThisBatch++;
     } catch (e) {
-      const message = (e as Error).message;
-      console.error(`SendByte error for ${r.email}:`, message);
-      failed.push({ email: r.email, error: message });
+      status = "failed";
+      errorMessage = (e as Error).message;
+      failedThisBatch++;
+      console.error(`SendByte error for ${r.email}:`, errorMessage);
     }
 
-    if (recipients.length > 1) {
+    await supabase.from("email_send_log").insert({
+      broadcast_id: broadcast.id,
+      application_id: r.id ?? null,
+      email: r.email,
+      status,
+      error: errorMessage,
+    });
+
+    if (batch.length > 1) {
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
   }
 
-  const status = sent === 0 && failed.length > 0 ? 502 : 200;
+  // Recount from log for accuracy across resumes
+  const { count: totalSent } = await supabase
+    .from("email_send_log")
+    .select("*", { count: "exact", head: true })
+    .eq("broadcast_id", broadcast.id)
+    .eq("status", "sent");
+  const { count: totalFailed } = await supabase
+    .from("email_send_log")
+    .select("*", { count: "exact", head: true })
+    .eq("broadcast_id", broadcast.id)
+    .eq("status", "failed");
+
+  const done = remaining === 0;
+  await supabase
+    .from("email_broadcasts")
+    .update({
+      sent_count: totalSent ?? 0,
+      failed_count: totalFailed ?? 0,
+      status: done ? "completed" : "in_progress",
+      completed_at: done ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", broadcast.id);
+
   return new Response(
-    JSON.stringify({ total: recipients.length, sent, failed_count: failed.length, failed }),
-    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    JSON.stringify({
+      broadcastId: broadcast.id,
+      batchProcessed: batch.length,
+      batchSent: sentThisBatch,
+      batchFailed: failedThisBatch,
+      remaining,
+      done,
+      totalSent: totalSent ?? 0,
+      totalFailed: totalFailed ?? 0,
+      total: broadcast.recipient_ids.length,
+    }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
