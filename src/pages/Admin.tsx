@@ -16,6 +16,27 @@ type Application = {
 
 type UploadKind = "header" | "footer" | "inline";
 
+type Broadcast = {
+  id: string;
+  subject: string;
+  total: number;
+  sent_count: number;
+  failed_count: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+type BroadcastLog = {
+  id: string;
+  email: string;
+  status: string;
+  error: string | null;
+  created_at: string;
+  application_id: string | null;
+};
+
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [apps, setApps] = useState<Application[] | null>(null);
@@ -23,7 +44,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [tab, setTab] = useState<"apps" | "broadcast">("apps");
+  const [tab, setTab] = useState<"apps" | "broadcast" | "history">("apps");
 
   // Broadcast composer state
   const [subject, setSubject] = useState("");
@@ -32,8 +53,17 @@ export default function Admin() {
   const [footerUrl, setFooterUrl] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState<string | null>(null);
   const [checkingService, setCheckingService] = useState(false);
   const [uploadingKind, setUploadingKind] = useState<null | UploadKind>(null);
+
+  const [broadcasts, setBroadcasts] = useState<Broadcast[] | null>(null);
+  const [broadcastDetail, setBroadcastDetail] = useState<{
+    broadcast: Broadcast & { body: string; recipient_ids: string[] };
+    logs: BroadcastLog[];
+    remaining: { id: string; email: string; full_name: string }[];
+  } | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
   const authHeaders = {
@@ -140,32 +170,122 @@ export default function Admin() {
       }
     }
     setSending(true);
+    setSendProgress(null);
     try {
-      const res = await fetch(`${FN_BASE}/send-broadcast`, {
-        method: "POST",
-        headers: { ...authHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject,
-          body,
-          headerImageUrl: headerUrl || undefined,
-          footerImageUrl: footerUrl || undefined,
-          testEmail: test ? testEmail : undefined,
-          recipientIds: test ? undefined : selectedRecipientIds,
-        }),
+      if (test) {
+        const res = await fetch(`${FN_BASE}/send-broadcast`, {
+          method: "POST",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject,
+            body,
+            headerImageUrl: headerUrl || undefined,
+            footerImageUrl: footerUrl || undefined,
+            testEmail,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Send failed");
+        toast.success(`Test sent to ${testEmail}`);
+        return;
+      }
+
+      // Batched send with resume — start a new broadcast, then keep calling until done
+      let broadcastId: string | undefined;
+      // Loop until server says done
+      // Safety cap so we can never loop forever
+      for (let i = 0; i < 100; i++) {
+        const res = await fetch(`${FN_BASE}/send-broadcast`, {
+          method: "POST",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify(
+            broadcastId
+              ? { broadcastId, maxBatch: 80 }
+              : {
+                  subject,
+                  body,
+                  headerImageUrl: headerUrl || undefined,
+                  footerImageUrl: footerUrl || undefined,
+                  recipientIds: selectedRecipientIds,
+                  maxBatch: 80,
+                },
+          ),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Send failed");
+        broadcastId = json.broadcastId;
+        setSendProgress(
+          `Sent ${json.totalSent}/${json.total} · ${json.totalFailed} failed · ${json.remaining} remaining`,
+        );
+        if (json.done) {
+          toast.success(`Broadcast complete: ${json.totalSent}/${json.total} sent (${json.totalFailed} failed)`);
+          break;
+        }
+      }
+    } catch (e: any) {
+      toast.error(e.message + " — you can resume from the History tab.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function loadBroadcasts() {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${FN_BASE}/admin-broadcasts`, {
+        method: "GET",
+        headers: authHeaders,
       });
       const json = await res.json();
-      if (!res.ok) {
-        const firstFailure = json.failed?.[0]?.error ? ` — ${json.failed[0].error}` : "";
-        throw new Error((json.error || "Send failed") + firstFailure);
+      if (!res.ok) throw new Error(json.error || "Failed");
+      setBroadcasts(json.broadcasts ?? []);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function openBroadcast(id: string) {
+    setBroadcastDetail(null);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${FN_BASE}/admin-broadcasts?broadcastId=${id}`, {
+        method: "GET",
+        headers: authHeaders,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      setBroadcastDetail(json);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function resumeBroadcast(id: string) {
+    setSending(true);
+    setSendProgress(null);
+    try {
+      for (let i = 0; i < 100; i++) {
+        const res = await fetch(`${FN_BASE}/send-broadcast`, {
+          method: "POST",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({ broadcastId: id, maxBatch: 80 }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Resume failed");
+        setSendProgress(
+          `Sent ${json.totalSent}/${json.total} · ${json.totalFailed} failed · ${json.remaining} remaining`,
+        );
+        if (json.done) {
+          toast.success(`Resume complete: ${json.totalSent}/${json.total} sent`);
+          break;
+        }
       }
-      toast.success(
-        test
-          ? `Test sent to ${testEmail}`
-          : `Sent ${json.sent}/${json.total} (${json.failed_count} failed)`,
-      );
-      if (!test && json.failed_count > 0) {
-        console.error("Broadcast failures", json.failed);
-      }
+      await openBroadcast(id);
+      await loadBroadcasts();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -205,7 +325,7 @@ export default function Admin() {
               UCA Admin
             </span>
             <h1 className="font-display mt-2 text-3xl sm:text-4xl">
-              {tab === "apps" ? "Applications" : "Broadcast"}
+              {tab === "apps" ? "Applications" : tab === "broadcast" ? "Broadcast" : "Broadcast history"}
             </h1>
           </div>
           {apps && (
@@ -234,6 +354,17 @@ export default function Admin() {
               }`}
             >
               Broadcast
+            </button>
+            <button
+              onClick={() => {
+                setTab("history");
+                if (broadcasts === null) loadBroadcasts();
+              }}
+              className={`rounded-full px-4 py-1.5 text-sm transition ${
+                tab === "history" ? "bg-[#E6A9FF] text-black" : "text-white/70"
+              }`}
+            >
+              History
             </button>
           </div>
         )}
@@ -331,6 +462,7 @@ export default function Admin() {
             testEmail={testEmail}
             setTestEmail={setTestEmail}
             sending={sending}
+            sendProgress={sendProgress}
             checkingService={checkingService}
             uploadingKind={uploadingKind}
             onUpload={uploadImage}
@@ -341,6 +473,20 @@ export default function Admin() {
             onToggleRecipient={toggleRecipient}
             onSelectAll={() => setSelectedRecipientIds(activeApps.map((a) => a.id))}
             onClearSelection={() => setSelectedRecipientIds([])}
+          />
+        )}
+
+        {apps && tab === "history" && (
+          <HistoryPanel
+            broadcasts={broadcasts}
+            loading={historyLoading}
+            detail={broadcastDetail}
+            sending={sending}
+            sendProgress={sendProgress}
+            onRefresh={loadBroadcasts}
+            onOpen={openBroadcast}
+            onClose={() => setBroadcastDetail(null)}
+            onResume={resumeBroadcast}
           />
         )}
       </div>
