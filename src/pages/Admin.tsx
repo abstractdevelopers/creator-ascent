@@ -515,6 +515,7 @@ type ComposerProps = {
   testEmail: string;
   setTestEmail: (s: string) => void;
   sending: boolean;
+  sendProgress: string | null;
   checkingService: boolean;
   uploadingKind: null | UploadKind;
   onUpload: (f: File, kind: UploadKind) => void;
@@ -672,6 +673,12 @@ function BroadcastComposer(p: ComposerProps) {
         >
           {p.sending ? "Sending…" : `Send to ${selectedCount} subscriber${selectedCount === 1 ? "" : "s"}`}
         </button>
+
+        {p.sendProgress && (
+          <div className="rounded-xl border border-[#E6A9FF]/25 bg-[#E6A9FF]/5 px-3 py-2 text-xs text-[#E6A9FF]">
+            {p.sendProgress}
+          </div>
+        )}
 
         <button
           onClick={p.onCheckService}
