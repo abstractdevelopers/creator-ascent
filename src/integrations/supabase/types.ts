@@ -66,6 +66,7 @@ export type Database = {
           header_image_url: string | null
           id: string
           recipient_ids: string[]
+          scheduled_at: string | null
           sent_count: number
           status: string
           subject: string
@@ -81,6 +82,7 @@ export type Database = {
           header_image_url?: string | null
           id?: string
           recipient_ids?: string[]
+          scheduled_at?: string | null
           sent_count?: number
           status?: string
           subject: string
@@ -96,6 +98,7 @@ export type Database = {
           header_image_url?: string | null
           id?: string
           recipient_ids?: string[]
+          scheduled_at?: string | null
           sent_count?: number
           status?: string
           subject?: string
@@ -147,7 +150,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      drain_broadcast_worker: { Args: never; Returns: undefined }
+      ensure_broadcast_worker: { Args: never; Returns: undefined }
+      verify_cron_secret: { Args: { _secret: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
