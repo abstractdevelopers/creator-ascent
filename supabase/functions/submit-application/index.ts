@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const NOTIFY_TO = "unifycreatoracademy@gmail.com";
-const FROM_ADDRESS = "UCA Waitlist <uca@launchverse.site>";
+const FROM_ADDRESS = "UCA Waitlist <uca@launchverse.space>";
 
 type Body = {
   full_name: string;
