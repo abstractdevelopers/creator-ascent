@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type Application = {
@@ -26,6 +26,7 @@ type Broadcast = {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  scheduled_at?: string | null;
 };
 
 type BroadcastLog = {
@@ -55,6 +56,9 @@ export default function Admin() {
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState<string | null>(null);
   const [checkingService, setCheckingService] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [backgroundMode, setBackgroundMode] = useState(true);
+  const [watchedBroadcastId, setWatchedBroadcastId] = useState<string | null>(null);
   const [uploadingKind, setUploadingKind] = useState<null | UploadKind>(null);
 
   const [broadcasts, setBroadcasts] = useState<Broadcast[] | null>(null);
@@ -75,6 +79,67 @@ export default function Admin() {
     () => apps?.filter((a) => !a.unsubscribed) ?? [],
     [apps],
   );
+
+  const passwordRef = useRef(password);
+  passwordRef.current = password;
+
+  function notifyDone(title: string, body: string) {
+    toast.success(`${title} — ${body}`);
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body });
+      }
+    } catch {
+      // notifications unsupported
+    }
+  }
+
+  // Background watcher: keeps polling a running/scheduled broadcast and
+  // notifies when the server finishes it, even if you switch tabs.
+  useEffect(() => {
+    if (!watchedBroadcastId) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `${FN_BASE}/admin-broadcasts?broadcastId=${watchedBroadcastId}`,
+          { headers: { "x-admin-password": passwordRef.current, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
+        );
+        const json = await res.json();
+        if (!res.ok || cancelled) return;
+        const b = json.broadcast as Broadcast | undefined;
+        if (!b) return;
+        if (b.status === "scheduled") {
+          setSendProgress(
+            `Scheduled for ${b.scheduled_at ? new Date(b.scheduled_at).toLocaleString() : "later"} · ${b.total} recipients`,
+          );
+          return;
+        }
+        setSendProgress(
+          `Sending in background · ${b.sent_count}/${b.total} sent · ${b.failed_count} failed`,
+        );
+        if (b.status === "completed") {
+          notifyDone(
+            "Broadcast complete",
+            `${b.sent_count}/${b.total} sent · ${b.failed_count} failed`,
+          );
+          setWatchedBroadcastId(null);
+          loadBroadcasts();
+        }
+      } catch {
+        // ignore transient errors
+      }
+    };
+
+    poll();
+    const id = setInterval(poll, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedBroadcastId]);
 
   async function load(e?: React.FormEvent) {
     e?.preventDefault();
@@ -172,6 +237,15 @@ export default function Admin() {
     setSending(true);
     setSendProgress(null);
     try {
+      if (!test && (scheduleAt || backgroundMode) && "Notification" in window) {
+        if (Notification.permission === "default") {
+          try {
+            await Notification.requestPermission();
+          } catch {
+            // ignore
+          }
+        }
+      }
       if (test) {
         const res = await fetch(`${FN_BASE}/send-broadcast`, {
           method: "POST",
@@ -187,6 +261,34 @@ export default function Admin() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Send failed");
         toast.success(`Test sent to ${testEmail}`);
+        return;
+      }
+
+      const scheduledIso = scheduleAt ? new Date(scheduleAt).toISOString() : null;
+
+      if (scheduledIso || backgroundMode) {
+        const res = await fetch(`${FN_BASE}/send-broadcast`, {
+          method: "POST",
+          headers: { ...authHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject,
+            body,
+            headerImageUrl: headerUrl || undefined,
+            footerImageUrl: footerUrl || undefined,
+            recipientIds: selectedRecipientIds,
+            scheduledAt: scheduledIso,
+            background: true,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Queue failed");
+        setWatchedBroadcastId(json.broadcastId);
+        toast.success(
+          scheduledIso
+            ? `Scheduled for ${new Date(scheduledIso).toLocaleString()} — you can close this page.`
+            : "Sending in the background — you can close this page, you'll be notified when it's done.",
+        );
+        loadBroadcasts();
         return;
       }
 
@@ -468,6 +570,10 @@ export default function Admin() {
             onUpload={uploadImage}
             onSend={sendBroadcast}
             onCheckService={checkEmailService}
+            scheduleAt={scheduleAt}
+            setScheduleAt={setScheduleAt}
+            backgroundMode={backgroundMode}
+            setBackgroundMode={setBackgroundMode}
             recipients={activeApps}
             selectedRecipientIds={selectedRecipientIds}
             onToggleRecipient={toggleRecipient}
@@ -521,6 +627,10 @@ type ComposerProps = {
   onUpload: (f: File, kind: UploadKind) => void;
   onSend: (test: boolean) => void;
   onCheckService: () => void;
+  scheduleAt: string;
+  setScheduleAt: (s: string) => void;
+  backgroundMode: boolean;
+  setBackgroundMode: (b: boolean) => void;
   recipients: Application[];
   selectedRecipientIds: string[];
   onToggleRecipient: (id: string) => void;
@@ -666,12 +776,48 @@ function BroadcastComposer(p: ComposerProps) {
           </button>
         </div>
 
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+          <label className="block text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">
+            Schedule (optional)
+          </label>
+          <input
+            type="datetime-local"
+            value={p.scheduleAt}
+            onChange={(e) => p.setScheduleAt(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-[#E6A9FF]/60 focus:outline-none"
+          />
+          {p.scheduleAt && (
+            <button
+              onClick={() => p.setScheduleAt("")}
+              className="mt-2 text-[11px] text-white/50 hover:text-white"
+            >
+              Clear schedule — send now
+            </button>
+          )}
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-[11px] leading-relaxed text-white/60">
+            <input
+              type="checkbox"
+              checked={p.backgroundMode}
+              onChange={(e) => p.setBackgroundMode(e.target.checked)}
+              className="mt-0.5 accent-[#E6A9FF]"
+            />
+            <span>
+              Send in the background — the server keeps sending after you close this page, and
+              you get a notification when it finishes.
+            </span>
+          </label>
+        </div>
+
         <button
           onClick={() => p.onSend(false)}
           disabled={p.sending || selectedCount === 0}
           className="btn-primary w-full rounded-full px-5 py-3 text-sm font-semibold disabled:opacity-50"
         >
-          {p.sending ? "Sending…" : `Send to ${selectedCount} subscriber${selectedCount === 1 ? "" : "s"}`}
+          {p.sending
+            ? "Working…"
+            : p.scheduleAt
+              ? `Schedule for ${selectedCount} subscriber${selectedCount === 1 ? "" : "s"}`
+              : `Send to ${selectedCount} subscriber${selectedCount === 1 ? "" : "s"}`}
         </button>
 
         {p.sendProgress && (
