@@ -14,6 +14,3 @@ verify_jwt = false
 
 [functions.unsubscribe]
 verify_jwt = false
-
-[functions.broadcast-worker]
-verify_jwt = false

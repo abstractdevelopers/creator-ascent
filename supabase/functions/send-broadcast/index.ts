@@ -9,7 +9,6 @@ const corsHeaders = {
 
 const FROM_ADDRESS = "Unify Creator Academy <uca@launchverse.site>";
 const PUBLIC_ORIGIN = "https://uca.launchverse.site";
-const REPLY_TO = "uca@launchverse.site";
 const SENDBYTE_ENDPOINT = "https://api.sendbyte.africa/v1/emails";
 const BRAND_BG = "#0D0707";
 const BRAND_ACCENT = "#E6A9FF";
@@ -63,14 +62,6 @@ function renderBodyContent(mergedText: string) {
     .join("");
 }
 
-function renderPlainText(mergedText: string, unsubscribeUrl: string) {
-  const stripped = mergedText
-    .replace(/^!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/gim, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  return `${stripped}\n\nYou're receiving this because you applied to Unify Creator Academy.\nUnsubscribe: ${unsubscribeUrl}\n`;
-}
-
 function render(opts: {
   bodyText: string;
   first: string;
@@ -114,7 +105,7 @@ async function sendbyteRequest(apiKey: string, payload: Record<string, unknown>)
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM_ADDRESS, reply_to: REPLY_TO, ...payload }),
+    body: JSON.stringify({ from: FROM_ADDRESS, ...payload }),
   });
 
   if (!res.ok) {
@@ -137,10 +128,7 @@ Deno.serve(async (req) => {
 
   const password = req.headers.get("x-admin-password") ?? "";
   const expected = Deno.env.get("ADMIN_PASSWORD") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const bearer = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  const internalCall = Boolean(serviceKey) && bearer === serviceKey;
-  if (!internalCall && (!expected || password !== expected)) {
+  if (!expected || password !== expected) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -206,8 +194,6 @@ Deno.serve(async (req) => {
     recipientIds,
     broadcastId,
     maxBatch,
-    scheduledAt,
-    background,
   } = payload as {
     subject?: string;
     body?: string;
@@ -217,8 +203,6 @@ Deno.serve(async (req) => {
     recipientIds?: string[];
     broadcastId?: string;
     maxBatch?: number;
-    scheduledAt?: string | null;
-    background?: boolean;
   };
 
   const supabase = createClient(
@@ -242,7 +226,6 @@ Deno.serve(async (req) => {
         to: [testEmail],
         subject: mergeTags(subject, first, last),
         html,
-        text: renderPlainText(mergeTags(body, first, last), unsubscribeUrl),
         headers: {
           "List-Unsubscribe": `<${unsubscribeUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -267,14 +250,12 @@ Deno.serve(async (req) => {
     header_image_url: string | null;
     footer_image_url: string | null;
     recipient_ids: string[];
-    status?: string;
-    scheduled_at?: string | null;
   };
 
   if (broadcastId) {
     const { data, error } = await supabase
       .from("email_broadcasts")
-      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids,status,scheduled_at")
+      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids")
       .eq("id", broadcastId)
       .maybeSingle();
     if (error || !data) {
@@ -284,22 +265,6 @@ Deno.serve(async (req) => {
       });
     }
     broadcast = data as typeof broadcast;
-    if (
-      broadcast.status === "scheduled" &&
-      broadcast.scheduled_at &&
-      new Date(broadcast.scheduled_at).getTime() > Date.now()
-    ) {
-      return new Response(
-        JSON.stringify({
-          broadcastId: broadcast.id,
-          scheduled: true,
-          waiting: true,
-          done: false,
-          scheduledAt: broadcast.scheduled_at,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
   } else {
     if (!subject || !body) {
       return new Response(JSON.stringify({ error: "subject and body required" }), {
@@ -322,10 +287,9 @@ Deno.serve(async (req) => {
         footer_image_url: footerImageUrl ?? null,
         recipient_ids: recipientIds,
         total: recipientIds.length,
-        scheduled_at: scheduledAt ?? null,
-        status: scheduledAt ? "scheduled" : "in_progress",
+        status: "in_progress",
       })
-      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids,status,scheduled_at")
+      .select("id,subject,body,header_image_url,footer_image_url,recipient_ids")
       .single();
     if (error || !data) {
       return new Response(JSON.stringify({ error: error?.message || "Insert failed" }), {
@@ -334,24 +298,6 @@ Deno.serve(async (req) => {
       });
     }
     broadcast = data as typeof broadcast;
-
-    // Queued for later, or handed off to the background worker: return immediately.
-    if (scheduledAt || background) {
-      return new Response(
-        JSON.stringify({
-          broadcastId: broadcast.id,
-          queued: true,
-          scheduled: Boolean(scheduledAt),
-          scheduledAt: scheduledAt ?? null,
-          done: false,
-          total: broadcast.recipient_ids.length,
-          totalSent: 0,
-          totalFailed: 0,
-          remaining: broadcast.recipient_ids.length,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
   }
 
   // Load recipients
@@ -412,7 +358,6 @@ Deno.serve(async (req) => {
         to: [r.email],
         subject: mergedSubject,
         html,
-        text: renderPlainText(mergeTags(broadcast.body, first, last), unsubscribeUrl),
         headers: {
           "List-Unsubscribe": `<${unsubscribeUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -462,10 +407,6 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     })
     .eq("id", broadcast.id);
-
-  if (done) {
-    await supabase.rpc("drain_broadcast_worker");
-  }
 
   return new Response(
     JSON.stringify({
