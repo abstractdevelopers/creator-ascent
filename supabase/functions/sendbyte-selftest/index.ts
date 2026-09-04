@@ -58,12 +58,12 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Unify Creator Academy <uca@launchverse.space>",
-        reply_to: "uca@launchverse.space",
+        from: "Unify Creator Academy <uca@launchverse.site>",
+        reply_to: "uca@launchverse.site",
         to: [to],
         subject: "UCA sender verification test",
-        html: "<p>Test send from uca@launchverse.space — if you got this, the new sender domain works.</p>",
-        text: "Test send from uca@launchverse.space",
+        html: "<p>Test send from uca@launchverse.site — if you got this, the new sender domain works.</p>",
+        text: "Test send from uca@launchverse.site",
       }),
     });
     results.send = { status: r.status, body: (await r.text()).slice(0, 800) };
