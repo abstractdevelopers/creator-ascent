@@ -47,18 +47,16 @@ Deno.serve(async (req) => {
 
   for (const b of pending ?? []) {
     while (Date.now() - startedAt < TIME_BUDGET_MS) {
-      const res = await fetch(`${fnBase}/send-broadcast`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": adminPassword,
+      const { data: json, error: invokeError } = await supabase.functions.invoke(
+        "send-broadcast",
+        {
+          body: { broadcastId: b.id, maxBatch: 60 },
+          headers: { "x-admin-password": adminPassword },
         },
-        body: JSON.stringify({ broadcastId: b.id, maxBatch: 60 }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error("worker send failed", b.id, json);
-        results.push({ broadcastId: b.id, error: json.error ?? res.status });
+      );
+      if (invokeError) {
+        console.error("worker send failed", b.id, invokeError.message);
+        results.push({ broadcastId: b.id, error: invokeError.message });
         break;
       }
       results.push({ broadcastId: b.id, ...json });
