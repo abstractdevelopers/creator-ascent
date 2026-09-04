@@ -19,6 +19,19 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const to = url.searchParams.get("to") ?? "westlourd@gmail.com";
 
+  if (url.searchParams.get("action") === "adddomain") {
+    const r = await fetch("https://api.sendbyte.africa/v1/domains", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ domain: "launchverse.space" }),
+    });
+    return new Response(await r.text(), {
+      status: r.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+
   // 1. connectivity / auth probe
   try {
     const r = await fetch("https://api.sendbyte.africa/v1/emails?limit=1", {
