@@ -7,9 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-const FROM_ADDRESS = "Unify Creator Academy <uca@launchverse.space>";
+const FROM_ADDRESS = "Unify Creator Academy <uca@launchverse.site>";
 const PUBLIC_ORIGIN = "https://uca.launchverse.site";
-const REPLY_TO = "uca@launchverse.space";
+const REPLY_TO = "uca@launchverse.site";
 const SENDBYTE_ENDPOINT = "https://api.sendbyte.africa/v1/emails";
 const BRAND_BG = "#0D0707";
 const BRAND_ACCENT = "#E6A9FF";

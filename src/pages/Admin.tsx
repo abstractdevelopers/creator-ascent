@@ -835,7 +835,7 @@ function BroadcastComposer(p: ComposerProps) {
         </button>
 
         <p className="text-[11px] leading-relaxed text-white/45">
-          Sender: uca@launchverse.space (via SendByte). Every broadcast includes an unsubscribe link.
+          Sender: uca@launchverse.site (via SendByte). Every broadcast includes an unsubscribe link.
         </p>
       </aside>
     </div>
