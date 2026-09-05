@@ -956,7 +956,7 @@ function HistoryPanel({
           >
             ← Back to history
           </button>
-          {detail.remaining.length > 0 && b.status !== "completed" && (
+          {detail.remaining.length > 0 && (
             <button
               onClick={() => onResume(b.id)}
               disabled={sending}

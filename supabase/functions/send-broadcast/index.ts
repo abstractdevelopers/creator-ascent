@@ -21,6 +21,45 @@ type Recipient = {
   unsubscribe_token: string;
 };
 
+const QUERY_CHUNK_SIZE = 100;
+const LOG_PAGE_SIZE = 1000;
+
+async function loadRecipients(
+  supabase: ReturnType<typeof createClient>,
+  recipientIds: string[],
+) {
+  const recipients: (Recipient & { unsubscribed?: boolean })[] = [];
+  for (let offset = 0; offset < recipientIds.length; offset += QUERY_CHUNK_SIZE) {
+    const ids = recipientIds.slice(offset, offset + QUERY_CHUNK_SIZE);
+    const { data, error } = await supabase
+      .from("applications")
+      .select("id,full_name,email,unsubscribe_token,unsubscribed")
+      .in("id", ids);
+    if (error) throw error;
+    recipients.push(...((data ?? []) as (Recipient & { unsubscribed?: boolean })[]));
+  }
+  return recipients;
+}
+
+async function loadSentEmails(
+  supabase: ReturnType<typeof createClient>,
+  broadcastId: string,
+) {
+  const sent = new Set<string>();
+  for (let from = 0; ; from += LOG_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("email_send_log")
+      .select("email")
+      .eq("broadcast_id", broadcastId)
+      .eq("status", "sent")
+      .range(from, from + LOG_PAGE_SIZE - 1);
+    if (error) throw error;
+    for (const row of data ?? []) sent.add(row.email.toLowerCase());
+    if ((data?.length ?? 0) < LOG_PAGE_SIZE) break;
+  }
+  return sent;
+}
+
 function splitName(full: string) {
   const parts = (full || "").trim().split(/\s+/);
   return { first: parts[0] || "there", last: parts.slice(1).join(" ") };
@@ -355,28 +394,23 @@ Deno.serve(async (req) => {
   }
 
   // Load recipients
-  const { data: apps, error: appsErr } = await supabase
-    .from("applications")
-    .select("id,full_name,email,unsubscribe_token,unsubscribed")
-    .in("id", broadcast.recipient_ids);
-  if (appsErr) {
-    return new Response(JSON.stringify({ error: appsErr.message }), {
+  let apps: (Recipient & { unsubscribed?: boolean })[];
+  let alreadySent: Set<string>;
+  try {
+    [apps, alreadySent] = await Promise.all([
+      loadRecipients(supabase, broadcast.recipient_ids),
+      loadSentEmails(supabase, broadcast.id),
+    ]);
+  } catch (error) {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Already-sent lookup (dedupe by lowercased email)
-  const { data: sentLogs } = await supabase
-    .from("email_send_log")
-    .select("email")
-    .eq("broadcast_id", broadcast.id)
-    .eq("status", "sent");
-  const alreadySent = new Set((sentLogs ?? []).map((r) => r.email.toLowerCase()));
-
   const seen = new Set<string>();
   const queue: Recipient[] = [];
-  for (const a of (apps ?? []) as (Recipient & { unsubscribed?: boolean })[]) {
+  for (const a of apps) {
     const key = a.email.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -387,7 +421,7 @@ Deno.serve(async (req) => {
 
   const limit = Math.max(1, Math.min(maxBatch ?? 80, 150));
   const batch = queue.slice(0, limit);
-  const remaining = queue.length - batch.length;
+  const unattempted = queue.length - batch.length;
 
   let sentThisBatch = 0;
   let failedThisBatch = 0;
@@ -451,13 +485,14 @@ Deno.serve(async (req) => {
     .eq("broadcast_id", broadcast.id)
     .eq("status", "failed");
 
+  const remaining = unattempted + failedThisBatch;
   const done = remaining === 0;
   await supabase
     .from("email_broadcasts")
     .update({
       sent_count: totalSent ?? 0,
       failed_count: totalFailed ?? 0,
-      status: done ? "completed" : "in_progress",
+      status: done ? "completed" : failedThisBatch > 0 ? "paused" : "in_progress",
       completed_at: done ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     })

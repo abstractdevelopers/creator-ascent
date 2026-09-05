@@ -25,8 +25,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  const adminPassword = Deno.env.get("ADMIN_PASSWORD") ?? "";
-  const fnBase = `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
   const startedAt = Date.now();
 
   // Promote any scheduled broadcast whose time has arrived.
@@ -41,7 +39,7 @@ Deno.serve(async (req) => {
     .select("id")
     .eq("status", "in_progress")
     .order("created_at", { ascending: true })
-    .limit(3);
+    .limit(1);
 
   const results: Record<string, unknown>[] = [];
 
@@ -51,16 +49,16 @@ Deno.serve(async (req) => {
         "send-broadcast",
         {
           body: { broadcastId: b.id, maxBatch: 60 },
-          headers: { "x-admin-password": adminPassword },
         },
       );
       if (invokeError) {
-        console.error("worker send failed", b.id, invokeError.message);
+        const context = await invokeError.context?.text?.().catch(() => "");
+        console.error("worker send failed", b.id, invokeError.message, context);
         results.push({ broadcastId: b.id, error: invokeError.message });
         break;
       }
       results.push({ broadcastId: b.id, ...json });
-      if (json.done || json.waiting) break;
+      if (json.done || json.waiting || json.remaining > 0) break;
     }
   }
 
