@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
+const QUERY_CHUNK_SIZE = 100;
+const LOG_PAGE_SIZE = 1000;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -28,19 +31,28 @@ Deno.serve(async (req) => {
   const broadcastId = url.searchParams.get("broadcastId");
 
   if (broadcastId) {
-    const [{ data: broadcast, error: bErr }, { data: logs, error: lErr }] = await Promise.all([
-      supabase
-        .from("email_broadcasts")
-        .select("*")
-        .eq("id", broadcastId)
-        .maybeSingle(),
-      supabase
+    const { data: broadcast, error: bErr } = await supabase
+      .from("email_broadcasts")
+      .select("*")
+      .eq("id", broadcastId)
+      .maybeSingle();
+
+    const logs: Record<string, any>[] = [];
+    let lErr: { message: string } | null = null;
+    for (let from = 0; ; from += LOG_PAGE_SIZE) {
+      const { data: page, error } = await supabase
         .from("email_send_log")
         .select("id,email,status,error,created_at,application_id")
         .eq("broadcast_id", broadcastId)
         .order("created_at", { ascending: false })
-        .limit(1000),
-    ]);
+        .range(from, from + LOG_PAGE_SIZE - 1);
+      if (error) {
+        lErr = error;
+        break;
+      }
+      logs.push(...(page ?? []));
+      if ((page?.length ?? 0) < LOG_PAGE_SIZE) break;
+    }
 
     if (bErr || lErr) {
       return new Response(
@@ -51,24 +63,35 @@ Deno.serve(async (req) => {
 
     // Compute remaining = recipient_ids - unique sent emails
     const sentEmails = new Set(
-      (logs ?? [])
+      logs
         .filter((l) => l.status === "sent")
         .map((l) => l.email.toLowerCase()),
     );
 
     let remaining: { id: string; email: string; full_name: string }[] = [];
     if (broadcast && Array.isArray(broadcast.recipient_ids) && broadcast.recipient_ids.length) {
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id,email,full_name,unsubscribed")
-        .in("id", broadcast.recipient_ids);
-      remaining = (apps ?? [])
+      const apps: { id: string; email: string; full_name: string; unsubscribed: boolean }[] = [];
+      for (let offset = 0; offset < broadcast.recipient_ids.length; offset += QUERY_CHUNK_SIZE) {
+        const ids = broadcast.recipient_ids.slice(offset, offset + QUERY_CHUNK_SIZE);
+        const { data: page, error } = await supabase
+          .from("applications")
+          .select("id,email,full_name,unsubscribed")
+          .in("id", ids);
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        apps.push(...(page ?? []));
+      }
+      remaining = apps
         .filter((a: any) => !a.unsubscribed && !sentEmails.has(a.email.toLowerCase()))
         .map((a: any) => ({ id: a.id, email: a.email, full_name: a.full_name }));
     }
 
     return new Response(
-      JSON.stringify({ broadcast, logs: logs ?? [], remaining }),
+      JSON.stringify({ broadcast, logs, remaining }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
