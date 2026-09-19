@@ -33,6 +33,8 @@ const COMMITMENT_OPTIONS = [
   "I'm mostly just exploring for now",
 ];
 
+const APPLICATIONS_CLOSED = true;
+
 type Props = { open: boolean; onOpenChange: (v: boolean) => void };
 
 export function ApplicationForm({ open, onOpenChange }: Props) {
@@ -108,8 +110,45 @@ export function ApplicationForm({ open, onOpenChange }: Props) {
           boxShadow: "0 30px 80px -20px rgba(0,0,0,0.9)",
         }}
       >
-        <DialogTitle className="sr-only">Apply for UCA Access</DialogTitle>
-        {submitted ? (
+        <DialogTitle className="sr-only">UCA Applications Closed</DialogTitle>
+        {APPLICATIONS_CLOSED ? (
+          <div className="px-6 py-14 text-center sm:px-10">
+            <span className="text-[10px] uppercase tracking-[0.4em] text-[#E6A9FF]">
+              UCA Waitlist
+            </span>
+            <h3 className="font-display mt-4 text-3xl leading-tight sm:text-4xl">
+              Applications Are Now Closed.
+            </h3>
+            <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-white/70">
+              Thank you to everyone who applied. Selected applicants will be
+              contacted by email. A reopening for the next intake will be
+              announced soon.
+            </p>
+
+            <div className="mt-10 rounded-2xl border border-[#E6A9FF]/20 bg-white/[0.03] p-6 text-center">
+              <p className="text-sm text-white/70">
+                Follow us on Instagram to hear when applications reopen
+              </p>
+              <a
+                href="https://instagram.com/unifycreatoracademy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-[#E6A9FF]/30 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white transition hover:border-[#E6A9FF]/60 hover:bg-white/[0.07]"
+              >
+                <Instagram size={18} className="text-[#E6A9FF]" />
+                @unifycreatoracademy
+              </a>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="btn-ghost mt-10 rounded-full px-7 py-3 text-sm"
+            >
+              Close
+            </button>
+          </div>
+        ) : submitted ? (
           <div className="px-6 py-14 text-center sm:px-10">
             <div className="mx-auto mb-6 h-12 w-12 rounded-full border border-[#E6A9FF]/40 bg-[#E6A9FF]/10" />
             <h3 className="font-display text-3xl leading-tight sm:text-4xl">
