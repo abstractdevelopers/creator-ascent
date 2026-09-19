@@ -471,6 +471,24 @@ export default function Admin() {
           </div>
         )}
 
+        {apps && tab === "apps" && apps.length > 0 && (
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => downloadApplications(apps, "csv")}
+              className="rounded-full border border-[#E6A9FF]/40 px-4 py-1.5 text-sm text-[#E6A9FF] transition hover:bg-[#E6A9FF]/10"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={() => downloadApplications(apps, "xls")}
+              className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-white/80 transition hover:bg-white/10"
+            >
+              Export Spreadsheet (.xls)
+            </button>
+            <span className="text-xs text-white/40">{apps.length} records</span>
+          </div>
+        )}
+
         {!apps && (
           <form
             onSubmit={load}
