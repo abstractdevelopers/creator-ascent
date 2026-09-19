@@ -1145,3 +1145,73 @@ function LogList({
     </div>
   );
 }
+
+const EXPORT_COLUMNS: { key: keyof Application; label: string }[] = [
+  { key: "full_name", label: "Full name" },
+  { key: "email", label: "Email" },
+  { key: "current_focus", label: "Current focus" },
+  { key: "skill_interest", label: "Skill interest" },
+  { key: "commitment", label: "Commitment" },
+  { key: "reason", label: "Reason" },
+  { key: "social_handle", label: "Social handle" },
+  { key: "created_at", label: "Submitted at" },
+  { key: "unsubscribed", label: "Unsubscribed" },
+];
+
+function cellValue(app: Application, key: keyof Application): string {
+  const raw = app[key];
+  if (raw === null || raw === undefined) return "";
+  if (key === "created_at") return new Date(String(raw)).toLocaleString();
+  if (typeof raw === "boolean") return raw ? "yes" : "no";
+  return String(raw);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function downloadApplications(apps: Application[], format: "csv" | "xls") {
+  const stamp = new Date().toISOString().slice(0, 10);
+  let content: string;
+  let mime: string;
+
+  if (format === "csv") {
+    const rows = [
+      EXPORT_COLUMNS.map((c) => c.label),
+      ...apps.map((a) => EXPORT_COLUMNS.map((c) => cellValue(a, c.key))),
+    ];
+    content =
+      "\uFEFF" +
+      rows
+        .map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
+        .join("\r\n");
+    mime = "text/csv;charset=utf-8";
+  } else {
+    const head = EXPORT_COLUMNS.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("");
+    const body = apps
+      .map(
+        (a) =>
+          `<tr>${EXPORT_COLUMNS.map(
+            (c) => `<td>${escapeHtml(cellValue(a, c.key))}</td>`,
+          ).join("")}</tr>`,
+      )
+      .join("");
+    content = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8" /></head><body><table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+    mime = "application/vnd.ms-excel;charset=utf-8";
+  }
+
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `uca-applications-${stamp}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast.success(`Exported ${apps.length} records`);
+}
