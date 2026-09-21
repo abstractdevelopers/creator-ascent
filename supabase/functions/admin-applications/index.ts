@@ -23,19 +23,30 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { data, error } = await supabase
-    .from("applications")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // PostgREST caps a single response (1000 rows by default), so page through the
+  // table. Without this the admin only ever sees the first page of applicants
+  // and the export silently drops everyone after them.
+  const PAGE_SIZE = 1000;
+  const applications: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("applications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
 
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    applications.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE_SIZE) break;
   }
 
-  return new Response(JSON.stringify({ applications: data ?? [] }), {
+  return new Response(JSON.stringify({ applications }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });

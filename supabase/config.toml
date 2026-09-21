@@ -1,6 +1,9 @@
-project_id = "phmxhzwuuwzubytducki"
+project_id = "prsyuynsetlohejfyatj"
 
 [functions.admin-applications]
+verify_jwt = false
+
+[functions.admin-broadcasts]
 verify_jwt = false
 
 [functions.submit-application]

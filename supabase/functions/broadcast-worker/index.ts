@@ -11,10 +11,8 @@ const TIME_BUDGET_MS = 45_000;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
 
   const secret = req.headers.get("x-cron-secret") ?? "";
   const { data: valid } = await supabase.rpc("verify_cron_secret", { _secret: secret });
@@ -45,20 +43,37 @@ Deno.serve(async (req) => {
 
   for (const b of pending ?? []) {
     while (Date.now() - startedAt < TIME_BUDGET_MS) {
-      const { data: json, error: invokeError } = await supabase.functions.invoke(
-        "send-broadcast",
-        {
-          body: { broadcastId: b.id, maxBatch: 60 },
-        },
-      );
-      if (invokeError) {
-        const context = await invokeError.context?.text?.().catch(() => "");
-        console.error("worker send failed", b.id, invokeError.message, context);
-        results.push({ broadcastId: b.id, error: invokeError.message });
+      // Call with plain fetch rather than supabase.functions.invoke. invoke
+      // puts the key only in `apikey` and reserves `Authorization` for a user
+      // JWT, so with new-format keys the server sees no Bearer token and
+      // rejects this as unauthorized. Both headers below carry the same
+      // injected service key that send-broadcast compares against.
+      let json: { done?: boolean; waiting?: boolean; remaining?: number } = {};
+      try {
+        const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-broadcast`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: serviceKey,
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ broadcastId: b.id, maxBatch: 60 }),
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          console.error("worker send failed", b.id, res.status, text.slice(0, 300));
+          results.push({ broadcastId: b.id, error: `HTTP ${res.status}: ${text.slice(0, 200)}` });
+          break;
+        }
+        json = JSON.parse(text);
+      } catch (e) {
+        console.error("worker send threw", b.id, (e as Error).message);
+        results.push({ broadcastId: b.id, error: (e as Error).message });
         break;
       }
+
       results.push({ broadcastId: b.id, ...json });
-      if (json.done || json.waiting || json.remaining > 0) break;
+      if (json.done || json.waiting || (json.remaining ?? 0) > 0) break;
     }
   }
 

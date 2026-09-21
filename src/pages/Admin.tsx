@@ -5,10 +5,11 @@ type Application = {
   id: string;
   full_name: string;
   email: string;
-  current_focus: string;
-  reason: string;
-  skill_interest: string;
-  commitment: string;
+  // Null for rows that came from a list import rather than the application form.
+  current_focus: string | null;
+  reason: string | null;
+  skill_interest: string | null;
+  commitment: string | null;
   social_handle: string | null;
   created_at: string;
   unsubscribed?: boolean;
@@ -618,11 +619,11 @@ export default function Admin() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-[0.2em] text-[#E6A9FF]">{label}</dt>
-      <dd className="mt-1 text-white/85">{value}</dd>
+      <dd className="mt-1 text-white/85">{value ?? "—"}</dd>
     </div>
   );
 }

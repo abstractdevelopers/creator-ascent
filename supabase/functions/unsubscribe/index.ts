@@ -18,8 +18,10 @@ Deno.serve(async (req) => {
     } catch { /* ignore */ }
   }
 
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Missing token" }), {
+  // Tokens are interpolated into a PostgREST filter, so only ever accept a uuid.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!token || !UUID_RE.test(token)) {
+    return new Response(JSON.stringify({ error: "Missing or invalid token" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -30,7 +32,9 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { data, error } = await supabase
+  // Links mailed before duplicate rows were merged still carry the retired
+  // token, so fall back to the tokens folded into the surviving row.
+  let { data, error } = await supabase
     .from("applications")
     .update({ unsubscribed: true })
     .eq("unsubscribe_token", token)
@@ -43,6 +47,23 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  if (!data) {
+    ({ data, error } = await supabase
+      .from("applications")
+      .update({ unsubscribed: true })
+      .contains("superseded_unsubscribe_tokens", [token])
+      .select("email")
+      .maybeSingle());
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   if (!data) {
     return new Response(JSON.stringify({ error: "Invalid token" }), {
       status: 404,

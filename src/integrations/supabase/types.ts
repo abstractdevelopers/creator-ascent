@@ -16,41 +16,50 @@ export type Database = {
     Tables: {
       applications: {
         Row: {
-          commitment: string
+          commitment: string | null
           created_at: string
-          current_focus: string
+          current_focus: string | null
           email: string
+          email_normalized: string | null
           full_name: string
           id: string
-          reason: string
-          skill_interest: string
+          reason: string | null
+          skill_interest: string | null
           social_handle: string | null
+          source: string
+          superseded_unsubscribe_tokens: string[]
           unsubscribe_token: string
           unsubscribed: boolean
         }
         Insert: {
-          commitment: string
+          commitment?: string | null
           created_at?: string
-          current_focus: string
+          current_focus?: string | null
           email: string
+          email_normalized?: string | null
           full_name: string
           id?: string
-          reason: string
-          skill_interest: string
+          reason?: string | null
+          skill_interest?: string | null
           social_handle?: string | null
+          source?: string
+          superseded_unsubscribe_tokens?: string[]
           unsubscribe_token?: string
           unsubscribed?: boolean
         }
         Update: {
-          commitment?: string
+          commitment?: string | null
           created_at?: string
-          current_focus?: string
+          current_focus?: string | null
           email?: string
+          email_normalized?: string | null
           full_name?: string
           id?: string
-          reason?: string
-          skill_interest?: string
+          reason?: string | null
+          skill_interest?: string | null
           social_handle?: string | null
+          source?: string
+          superseded_unsubscribe_tokens?: string[]
           unsubscribe_token?: string
           unsubscribed?: boolean
         }

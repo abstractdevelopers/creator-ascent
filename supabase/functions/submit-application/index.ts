@@ -72,16 +72,25 @@ Deno.serve(async (req) => {
     social_handle: body.social_handle?.trim() || null,
   };
 
+  // email_normalized is unique, so a repeat application is a no-op rather than an
+  // error. The applicant still sees the normal confirmation.
   const { data: inserted, error } = await supabase
     .from("applications")
-    .insert(payload)
+    .upsert(payload, { onConflict: "email_normalized", ignoreDuplicates: true })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Insert error:", error);
     return new Response(JSON.stringify({ error: "Failed to save application" }), {
       status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const isDuplicate = !inserted;
+  if (isDuplicate) {
+    return new Response(JSON.stringify({ ok: true, duplicate: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
